@@ -120,4 +120,5 @@ module.exports = {
   getUserById,
   updateUser,
   updateUserStatus,
+  assertDepartmentBelongsToOrg,
 };

@@ -12,6 +12,9 @@ function Home() {
         Signed in as {user?.name} ({user?.email})
         {user?.organizationId?.name ? ` — ${user.organizationId.name}` : ''}
       </p>
+      <Link to="/memos" className="text-sm font-medium text-blue-600 hover:underline">
+        My Memos
+      </Link>
       {user?.role === 'admin' && (
         <Link to="/admin" className="text-sm font-medium text-blue-600 hover:underline">
           Go to Administration

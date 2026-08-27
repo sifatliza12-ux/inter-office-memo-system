@@ -14,6 +14,10 @@ const memoSchema = new Schema(
       ref: 'User',
       required: true,
     },
+    departmentId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Department',
+    },
     subject: {
       type: String,
       required: true,
@@ -25,8 +29,8 @@ const memoSchema = new Schema(
     },
     category: {
       type: String,
-      enum: ['general', 'policy', 'announcement', 'request', 'report'],
-      default: 'general',
+      enum: ['Administrative', 'Financial', 'Procurement', 'HR', 'Academic', 'Technical', 'General'],
+      default: 'General',
     },
     priority: {
       type: String,
@@ -35,11 +39,27 @@ const memoSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ['draft', 'pending', 'in_review', 'approved', 'rejected', 'published'],
+      enum: ['draft', 'submitted', 'pending', 'in_review', 'approved', 'rejected', 'published'],
       default: 'draft',
+    },
+    workflowParticipants: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
+    referenceNumber: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    submittedAt: {
+      type: Date,
     },
   },
   { timestamps: true }
 );
+
+memoSchema.index({ organizationId: 1, referenceNumber: 1 }, { unique: true });
 
 module.exports = mongoose.model('Memo', memoSchema);

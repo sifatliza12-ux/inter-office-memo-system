@@ -3,6 +3,9 @@ import { Routes, Route } from 'react-router-dom';
 import Login from '../pages/Login.jsx';
 import Home from '../pages/Home.jsx';
 import Administration from '../pages/Administration.jsx';
+import MyMemos from '../pages/MyMemos.jsx';
+import MemoForm from '../pages/MemoForm.jsx';
+import MemoDetail from '../pages/MemoDetail.jsx';
 import ProtectedRoute from './ProtectedRoute.jsx';
 
 function AppRoutes() {
@@ -22,6 +25,38 @@ function AppRoutes() {
         element={
           <ProtectedRoute roles={['admin']}>
             <Administration />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/memos"
+        element={
+          <ProtectedRoute>
+            <MyMemos />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/memos/new"
+        element={
+          <ProtectedRoute>
+            <MemoForm />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/memos/:id/edit"
+        element={
+          <ProtectedRoute>
+            <MemoForm />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/memos/:id"
+        element={
+          <ProtectedRoute>
+            <MemoDetail />
           </ProtectedRoute>
         }
       />

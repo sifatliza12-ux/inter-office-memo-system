@@ -1,0 +1,231 @@
+const Memo = require('../models/Memo');
+const User = require('../models/User');
+const WorkflowStep = require('../models/WorkflowStep');
+const ApiError = require('../utils/ApiError');
+const { generateMemoReferenceNumber } = require('./referenceNumber.service');
+const { assertDepartmentBelongsToOrg } = require('./user.service');
+
+const ALLOWED_CATEGORIES = ['Administrative', 'Financial', 'Procurement', 'HR', 'Academic', 'Technical', 'General'];
+const ALLOWED_PRIORITIES = ['low', 'normal', 'high', 'urgent'];
+const STEP_ORDER_INCREMENT = 10;
+
+// Never trust workflow participant ids blindly: every one of them must
+// exist and belong to the same organization as the memo's author.
+const assertParticipantsBelongToOrg = async (organizationId, workflowParticipants) => {
+  if (!workflowParticipants || workflowParticipants.length === 0) {
+    return;
+  }
+
+  const uniqueIds = [...new Set(workflowParticipants.map(String))];
+  const foundUsers = await User.find({ _id: { $in: uniqueIds }, organizationId }).select('_id');
+  const foundIds = new Set(foundUsers.map((user) => user._id.toString()));
+
+  const missing = uniqueIds.some((id) => !foundIds.has(id));
+  if (missing) {
+    throw new ApiError(400, 'One or more workflow participants do not exist in your organization');
+  }
+};
+
+const assertValidCategory = (category) => {
+  if (category !== undefined && !ALLOWED_CATEGORIES.includes(category)) {
+    throw new ApiError(400, `category must be one of: ${ALLOWED_CATEGORIES.join(', ')}`);
+  }
+};
+
+const assertValidPriority = (priority) => {
+  if (priority !== undefined && !ALLOWED_PRIORITIES.includes(priority)) {
+    throw new ApiError(400, `priority must be one of: ${ALLOWED_PRIORITIES.join(', ')}`);
+  }
+};
+
+const createMemo = async (organizationId, authorId, authorDepartmentId, payload) => {
+  const { subject, body, category, priority, departmentId, workflowParticipants } = payload;
+
+  if (!subject || !body) {
+    throw new ApiError(400, 'subject and body are required');
+  }
+
+  assertValidCategory(category);
+  assertValidPriority(priority);
+
+  const resolvedDepartmentId = departmentId !== undefined ? departmentId : authorDepartmentId;
+  await assertDepartmentBelongsToOrg(organizationId, resolvedDepartmentId);
+  await assertParticipantsBelongToOrg(organizationId, workflowParticipants);
+
+  const referenceNumber = await generateMemoReferenceNumber(organizationId);
+
+  return Memo.create({
+    organizationId,
+    authorId,
+    departmentId: resolvedDepartmentId || undefined,
+    subject,
+    body,
+    category,
+    priority,
+    workflowParticipants: workflowParticipants || [],
+    referenceNumber,
+    status: 'draft',
+  });
+};
+
+const listMyMemos = async (organizationId, authorId, { status, category, priority } = {}) => {
+  const filter = { organizationId, authorId };
+
+  if (status) {
+    filter.status = status;
+  }
+  if (category) {
+    filter.category = category;
+  }
+  if (priority) {
+    filter.priority = priority;
+  }
+
+  return Memo.find(filter).sort({ createdAt: -1 });
+};
+
+// View privacy rule, regardless of status: only the author or a listed
+// workflow participant may view a memo. Any other same-org user gets 403.
+// Cross-organization access is handled one level up, by the 404 thrown when
+// the scoped lookup finds nothing.
+const getMemoById = async (organizationId, id, requestingUserId) => {
+  const memo = await Memo.findOne({ _id: id, organizationId });
+
+  if (!memo) {
+    throw new ApiError(404, 'Memo not found');
+  }
+
+  const isAuthor = memo.authorId.toString() === String(requestingUserId);
+  const isParticipant = memo.workflowParticipants.some(
+    (participantId) => participantId.toString() === String(requestingUserId)
+  );
+
+  if (!isAuthor && !isParticipant) {
+    throw new ApiError(403, 'You do not have access to this memo');
+  }
+
+  return memo;
+};
+
+// Shared by update/delete/submit: only the author may ever mutate a memo,
+// regardless of its status — a non-author gets 403 even for a submitted
+// memo, not just for a draft.
+const getMemoForMutation = async (organizationId, id, requestingUserId) => {
+  const memo = await Memo.findOne({ _id: id, organizationId });
+
+  if (!memo) {
+    throw new ApiError(404, 'Memo not found');
+  }
+
+  if (memo.authorId.toString() !== String(requestingUserId)) {
+    throw new ApiError(403, 'You do not have access to this memo');
+  }
+
+  return memo;
+};
+
+const updateMemo = async (organizationId, id, requestingUserId, payload) => {
+  const memo = await getMemoForMutation(organizationId, id, requestingUserId);
+
+  if (memo.status !== 'draft') {
+    throw new ApiError(400, 'Only a draft memo can be edited');
+  }
+
+  const { subject, body, category, priority, departmentId, workflowParticipants } = payload;
+
+  assertValidCategory(category);
+  assertValidPriority(priority);
+
+  if (departmentId !== undefined) {
+    await assertDepartmentBelongsToOrg(organizationId, departmentId);
+  }
+  if (workflowParticipants !== undefined) {
+    await assertParticipantsBelongToOrg(organizationId, workflowParticipants);
+  }
+
+  if (subject !== undefined) {
+    memo.subject = subject;
+  }
+  if (body !== undefined) {
+    memo.body = body;
+  }
+  if (category !== undefined) {
+    memo.category = category;
+  }
+  if (priority !== undefined) {
+    memo.priority = priority;
+  }
+  if (departmentId !== undefined) {
+    memo.departmentId = departmentId || undefined;
+  }
+  if (workflowParticipants !== undefined) {
+    memo.workflowParticipants = workflowParticipants;
+  }
+
+  await memo.save();
+  return memo;
+};
+
+const deleteMemo = async (organizationId, id, requestingUserId) => {
+  const memo = await getMemoForMutation(organizationId, id, requestingUserId);
+
+  if (memo.status !== 'draft') {
+    throw new ApiError(400, 'Only a draft memo can be deleted');
+  }
+
+  await memo.deleteOne();
+};
+
+const submitMemo = async (organizationId, id, requestingUserId) => {
+  const memo = await getMemoForMutation(organizationId, id, requestingUserId);
+
+  if (memo.status !== 'draft') {
+    throw new ApiError(400, 'Only a draft memo can be submitted');
+  }
+
+  if (!memo.workflowParticipants || memo.workflowParticipants.length === 0) {
+    throw new ApiError(400, 'At least one workflow participant is required to submit a memo');
+  }
+
+  // Re-validate at submit time rather than trusting whatever was stored at
+  // create/edit time — cheap, and closes off any drift between when the
+  // participants were set and when the memo is actually submitted.
+  await assertParticipantsBelongToOrg(organizationId, memo.workflowParticipants);
+
+  const steps = memo.workflowParticipants.map((userId, index) => ({
+    memoId: memo._id,
+    userId,
+    stepOrder: (index + 1) * STEP_ORDER_INCREMENT,
+  }));
+
+  try {
+    await WorkflowStep.insertMany(steps, { ordered: true });
+  } catch (error) {
+    await WorkflowStep.deleteMany({ memoId: memo._id });
+    throw new ApiError(500, 'Failed to create the approval workflow for this memo; submission was not completed');
+  }
+
+  memo.status = 'submitted';
+  memo.submittedAt = new Date();
+
+  try {
+    await memo.save();
+  } catch (error) {
+    // Roll back the steps we just created so a save failure can't leave
+    // WorkflowSteps behind for a memo that's still a draft.
+    await WorkflowStep.deleteMany({ memoId: memo._id });
+    throw error;
+  }
+
+  const createdSteps = await WorkflowStep.find({ memoId: memo._id }).sort({ stepOrder: 1 });
+  return { memo, workflowSteps: createdSteps };
+};
+
+module.exports = {
+  createMemo,
+  listMyMemos,
+  getMemoById,
+  updateMemo,
+  deleteMemo,
+  submitMemo,
+};
