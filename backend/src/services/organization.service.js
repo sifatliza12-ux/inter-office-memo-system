@@ -1,11 +1,8 @@
-const bcrypt = require('bcrypt');
-
 const Organization = require('../models/Organization');
 const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
 const { isValidEmail } = require('../utils/validators');
-
-const SALT_ROUNDS = 10;
+const { hashPassword } = require('./auth.service');
 
 const createOrganizationWithAdmin = async ({
   name,
@@ -48,7 +45,7 @@ const createOrganizationWithAdmin = async ({
     subscriptionTier,
   });
 
-  const hashedPassword = await bcrypt.hash(adminPassword, SALT_ROUNDS);
+  const hashedPassword = await hashPassword(adminPassword);
 
   const adminUser = await User.create({
     organizationId: organization._id,

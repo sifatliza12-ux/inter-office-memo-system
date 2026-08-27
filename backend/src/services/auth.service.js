@@ -4,6 +4,10 @@ const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
 const { generateToken } = require('../utils/jwt');
 
+const SALT_ROUNDS = 10;
+
+const hashPassword = async (password) => bcrypt.hash(password, SALT_ROUNDS);
+
 const login = async ({ email, password }) => {
   if (!email || !password) {
     throw new ApiError(400, 'Email and password are required');
@@ -45,4 +49,4 @@ const getCurrentUser = async (userId) => {
   return user;
 };
 
-module.exports = { login, getCurrentUser };
+module.exports = { login, getCurrentUser, hashPassword };
