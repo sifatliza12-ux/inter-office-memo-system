@@ -103,4 +103,14 @@ const getOrganizationDashboard = async (organizationId) => {
   };
 };
 
-module.exports = { getUserDashboard, getOrganizationDashboard };
+module.exports = {
+  getUserDashboard,
+  getOrganizationDashboard,
+  // Exported for reuse by Stage 10's report.service.js — same status
+  // breakdown shape, same ObjectId-casting caveat for .aggregate() — rather
+  // than duplicating them. Neither existing endpoint above is changed by
+  // this export.
+  TRACKED_STATUSES,
+  zeroFilledStatusCounts,
+  toObjectId,
+};

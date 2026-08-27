@@ -11,6 +11,7 @@ const workflowStepRoutes = require('./workflowStep.routes');
 const commentRoutes = require('./comment.routes');
 const notificationRoutes = require('./notification.routes');
 const auditLogRoutes = require('./auditLog.routes');
+const reportRoutes = require('./report.routes');
 
 const router = express.Router();
 
@@ -25,5 +26,6 @@ router.use('/workflow-steps', workflowStepRoutes);
 router.use('/comments', commentRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/audit-logs', auditLogRoutes);
+router.use('/reports', reportRoutes);
 
 module.exports = router;

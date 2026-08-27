@@ -11,6 +11,7 @@ import Inbox from '../pages/Inbox.jsx';
 import Dashboard from '../pages/Dashboard.jsx';
 import Search from '../pages/Search.jsx';
 import AuditLog from '../pages/AuditLog.jsx';
+import Reports from '../pages/Reports.jsx';
 import ProtectedRoute from './ProtectedRoute.jsx';
 
 function AppRoutes() {
@@ -71,6 +72,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute roles={['admin']}>
             <AuditLog />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/reports"
+        element={
+          <ProtectedRoute roles={['admin']}>
+            <Reports />
           </ProtectedRoute>
         }
       />

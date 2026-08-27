@@ -41,6 +41,11 @@ function NavBar() {
             Audit Log
           </NavLink>
         )}
+        {user.role === 'admin' && (
+          <NavLink to="/admin/reports" className={linkClasses}>
+            Reports
+          </NavLink>
+        )}
       </div>
       <div className="flex items-center gap-3">
         <NotificationBell />
