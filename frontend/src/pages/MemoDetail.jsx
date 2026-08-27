@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
-import { getMemo, deleteMemo, submitMemo } from '../services/memos';
+import { getMemo, deleteMemo, submitMemo, exportMemoPdf } from '../services/memos';
 import { getWorkflow, resubmitMemo } from '../services/workflow';
 import { getDirectory } from '../services/directory';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -24,6 +24,7 @@ function MemoDetail() {
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setError('');
@@ -73,6 +74,18 @@ function MemoDetail() {
       setActionError(submitError.response?.data?.message || 'Failed to submit memo');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleExportPdf = async () => {
+    setActionError('');
+    setExporting(true);
+    try {
+      await exportMemoPdf(id, memo.referenceNumber);
+    } catch (exportError) {
+      setActionError(exportError.response?.data?.message || 'Failed to export PDF');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -131,9 +144,19 @@ function MemoDetail() {
             <h1 className="text-xl font-semibold text-gray-800">{memo.subject}</h1>
             <p className="text-sm text-gray-500">{memo.referenceNumber}</p>
           </div>
-          <Link to="/memos" className="text-sm text-blue-600 hover:underline">
-            Back to My Memos
-          </Link>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleExportPdf}
+              disabled={exporting}
+              className="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              {exporting ? 'Exporting...' : 'Export PDF'}
+            </button>
+            <Link to="/memos" className="text-sm text-blue-600 hover:underline">
+              Back to My Memos
+            </Link>
+          </div>
         </div>
 
         {actionError && <p className="text-sm text-red-600">{actionError}</p>}

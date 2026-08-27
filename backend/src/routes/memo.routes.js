@@ -4,6 +4,7 @@ const memoController = require('../controllers/memo.controller');
 const workflowController = require('../controllers/workflow.controller');
 const commentController = require('../controllers/comment.controller');
 const attachmentController = require('../controllers/attachment.controller');
+const exportController = require('../controllers/export.controller');
 const protect = require('../middleware/auth');
 const { uploadSingleFile } = require('../middleware/upload');
 
@@ -32,6 +33,9 @@ router.post('/:id/request-changes', workflowController.requestChanges);
 router.post('/:id/resubmit', workflowController.resubmitMemo);
 router.post('/:id/workflow/add-participant', workflowController.addParticipant);
 router.get('/:id/workflow', workflowController.getWorkflowHistory);
+
+// Generated on-demand per request, never persisted — not a new Attachment.
+router.get('/:id/export/pdf', exportController.exportMemoPdf);
 
 // General discussion comments — a separate collection/thread from the
 // approve/reject/request-changes comments recorded on WorkflowStep above.
