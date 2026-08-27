@@ -4,8 +4,15 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getMemo, createMemo, updateMemo, submitMemo } from '../services/memos';
 import { resubmitMemo } from '../services/workflow';
 import { getDirectory } from '../services/directory';
+import { uploadAttachment } from '../services/attachments';
 import ParticipantPicker from '../components/ParticipantPicker.jsx';
 import NavBar from '../components/NavBar.jsx';
+
+const formatSize = (bytes) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 const CATEGORIES = ['Administrative', 'Financial', 'Procurement', 'HR', 'Academic', 'Technical', 'General'];
 const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
@@ -30,6 +37,11 @@ function MemoForm() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [memoStatus, setMemoStatus] = useState('draft');
+  // Files picked before the memo exists yet — nothing to upload against
+  // until createMemo() returns an id, so these are held locally and
+  // uploaded through the existing attachment endpoint right after creation.
+  const [stagedFiles, setStagedFiles] = useState([]);
+  const [createdMemoId, setCreatedMemoId] = useState(null);
 
   useEffect(() => {
     getDirectory()
@@ -72,6 +84,37 @@ function MemoForm() {
     workflowParticipants: form.workflowParticipants,
   });
 
+  const handleStageFiles = (event) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+    if (files.length === 0) {
+      return;
+    }
+    setStagedFiles((previous) => [...previous, ...files]);
+  };
+
+  const removeStagedFile = (index) => {
+    setStagedFiles((previous) => previous.filter((_, fileIndex) => fileIndex !== index));
+  };
+
+  // Uploads every staged file through the same POST /:id/attachments
+  // endpoint AttachmentsSection already uses — no new backend behavior, no
+  // change to who's allowed to upload. Uses allSettled rather than all so
+  // one bad file doesn't stop the rest from going through; returns a
+  // human-readable message per failure rather than throwing, since a
+  // partial attachment failure should never be treated the same as the
+  // memo itself failing to save.
+  const uploadStagedFiles = async (memoId) => {
+    if (stagedFiles.length === 0) {
+      return [];
+    }
+    const results = await Promise.allSettled(stagedFiles.map((file) => uploadAttachment(memoId, file)));
+    return results
+      .map((result, index) => ({ result, file: stagedFiles[index] }))
+      .filter(({ result }) => result.status === 'rejected')
+      .map(({ result, file }) => `${file.name}: ${result.reason?.response?.data?.message || 'upload failed'}`);
+  };
+
   const saveDraft = async (event) => {
     event.preventDefault();
     setError('');
@@ -82,7 +125,17 @@ function MemoForm() {
         navigate(`/memos/${id}`);
       } else {
         const { data } = await createMemo(buildPayload());
-        navigate(`/memos/${data.memo._id}`);
+        const newMemoId = data.memo._id;
+        const failures = await uploadStagedFiles(newMemoId);
+        if (failures.length > 0) {
+          setCreatedMemoId(newMemoId);
+          setError(
+            `Memo created, but ${failures.length} attachment(s) failed to upload: ${failures.join('; ')}. ` +
+              'You can retry from the memo page.'
+          );
+        } else {
+          navigate(`/memos/${newMemoId}`);
+        }
       }
     } catch (saveError) {
       setError(saveError.response?.data?.message || 'Failed to save memo');
@@ -98,18 +151,28 @@ function MemoForm() {
     setSubmitting(true);
     try {
       let memoId = id;
+      let failures = [];
       if (isEditing) {
         await updateMemo(id, buildPayload());
       } else {
         const { data } = await createMemo(buildPayload());
         memoId = data.memo._id;
+        failures = await uploadStagedFiles(memoId);
       }
       if (isResubmit) {
         await resubmitMemo(memoId);
       } else {
         await submitMemo(memoId);
       }
-      navigate(`/memos/${memoId}`);
+      if (failures.length > 0) {
+        setCreatedMemoId(memoId);
+        setError(
+          `Memo submitted, but ${failures.length} attachment(s) failed to upload: ${failures.join('; ')}. ` +
+            'You can retry from the memo page.'
+        );
+      } else {
+        navigate(`/memos/${memoId}`);
+      }
     } catch (submitError) {
       setError(submitError.response?.data?.message || 'Failed to submit memo');
     } finally {
@@ -136,7 +199,19 @@ function MemoForm() {
           </Link>
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <p className="text-sm text-red-600">
+            {error}
+            {createdMemoId && (
+              <>
+                {' '}
+                <Link to={`/memos/${createdMemoId}`} className="underline">
+                  Go to memo
+                </Link>
+              </>
+            )}
+          </p>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700">Subject</label>
@@ -214,6 +289,43 @@ function MemoForm() {
             onChange={(ids) => setForm({ ...form, workflowParticipants: ids })}
           />
         </div>
+
+        {!isEditing && (
+          <div>
+            <p className="text-sm font-medium text-gray-700">Attachments</p>
+            <p className="mt-1 text-xs text-gray-400">
+              Selected files are uploaded once the memo is created. PDF, Word, Excel, PNG, or JPEG — up to 10MB
+              each.
+            </p>
+            <input
+              type="file"
+              multiple
+              onChange={handleStageFiles}
+              className="mt-2 block text-sm text-gray-700"
+            />
+            {stagedFiles.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {stagedFiles.map((file, index) => (
+                  <li
+                    key={`${file.name}-${index}`}
+                    className="flex items-center justify-between rounded border border-gray-200 px-2 py-1 text-sm"
+                  >
+                    <span>
+                      {file.name} ({formatSize(file.size)})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeStagedFile(index)}
+                      className="text-xs text-red-600 hover:underline"
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         <div className="flex gap-2 pt-2">
           <button

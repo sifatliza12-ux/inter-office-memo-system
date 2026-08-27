@@ -1,3 +1,4 @@
+const fs = require('fs');
 const request = require('supertest');
 
 const app = require('../src/app');
@@ -146,6 +147,36 @@ describe('Attachments: POST/GET /api/memos/:id/attachments', () => {
 
     const memo = await Memo.findById(memoId);
     expect(memo.status).toBe('submitted');
+  });
+
+  it('recovers automatically if the uploads directory is removed after the process started (self-healing, not just created once at startup)', async () => {
+    const org = await createOrganizationWithAdmin(app);
+    const organizationId = org.response.body.organization._id;
+    const authorToken = await loginAs(app, org.payload.adminEmail, org.payload.adminPassword);
+    const { memoId } = await createSubmittedWorkflow(app, organizationId, authorToken, 1);
+
+    // Simulate exactly what happened in practice: something removes the
+    // uploads directory well after attachment.service.js already ran its
+    // once-at-module-load mkdirSync. Without a re-check immediately before
+    // each write, the next upload would fail with ENOENT.
+    const uploadsDir = process.env.UPLOADS_DIR;
+    fs.rmSync(uploadsDir, { recursive: true, force: true });
+    expect(fs.existsSync(uploadsDir)).toBe(false);
+
+    const response = await request(app)
+      .post(`/api/memos/${memoId}/attachments`)
+      .set('Authorization', `Bearer ${authorToken}`)
+      .attach('file', PDF_BUFFER, 'recovers.pdf');
+
+    expect(response.status).toBe(201);
+    expect(fs.existsSync(uploadsDir)).toBe(true);
+
+    // And it's genuinely readable back, not just reported as created.
+    const download = await request(app)
+      .get(`/api/memos/${memoId}/attachments/${response.body.attachment._id}/download`)
+      .set('Authorization', `Bearer ${authorToken}`);
+    expect(download.status).toBe(200);
+    expect(Buffer.compare(download.body, PDF_BUFFER)).toBe(0);
   });
 });
 

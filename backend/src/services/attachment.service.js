@@ -7,7 +7,12 @@ const Memo = require('../models/Memo');
 const WorkflowStep = require('../models/WorkflowStep');
 const ApiError = require('../utils/ApiError');
 
-const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads');
+// Overridable so the test suite can point this at its own throwaway
+// directory instead of the real backend/uploads/ — otherwise the test
+// suite's own cleanup (tests/setup.js) would delete the same directory a
+// concurrently running dev server writes into, which is exactly what caused
+// an ENOENT there in practice.
+const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, '..', '..', 'uploads');
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 // Each allowed extension maps to the mimetype we record and the magic-byte
@@ -100,6 +105,12 @@ const uploadAttachment = async (organizationId, memoId, requestingUserId, file) 
   // another upload.
   const storedFilename = `${crypto.randomUUID()}.${detected.ext}`;
   const absolutePath = path.join(UPLOADS_DIR, storedFilename);
+  // Re-ensured immediately before every write, not just once at module
+  // load — self-healing against the directory having been removed after
+  // the process started (by anything: a cleanup script, a volume reset),
+  // rather than only working the first time and failing with ENOENT ever
+  // after.
+  await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
   await fs.promises.writeFile(absolutePath, file.buffer);
 
   try {
