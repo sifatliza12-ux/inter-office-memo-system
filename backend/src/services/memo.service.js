@@ -127,6 +127,74 @@ const listInbox = async (organizationId, userId, { status, category, priority } 
   });
 };
 
+const escapeRegex = (string) => String(string).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Same visibility rule as comments/attachments (Stage 7/8): authored by the
+// caller, or the caller holds ANY WorkflowStep on the memo (past/current/
+// future). Combined via a single top-level $and with every other filter —
+// never a second, independent $or — so there is no way for the visibility
+// clause to be accidentally widened by whatever the caller passed in q/
+// status/etc. A memo this query wouldn't return is a memo GET /memos/:id
+// would also 403/404 on for this same user; that invariant is what the
+// Stage 8 "never leak a memo the user isn't authorized to view" requirement
+// actually rests on.
+const searchMemos = async (
+  organizationId,
+  requestingUserId,
+  { q, status, category, priority, department, dateFrom, dateTo, page, limit } = {}
+) => {
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.max(1, parseInt(limit, 10) || 20);
+
+  const participantMemoIds = await WorkflowStep.find({ userId: requestingUserId }).distinct('memoId');
+
+  const andClauses = [
+    { organizationId },
+    { $or: [{ authorId: requestingUserId }, { _id: { $in: participantMemoIds } }] },
+  ];
+
+  if (status) {
+    andClauses.push({ status });
+  }
+  if (category) {
+    andClauses.push({ category });
+  }
+  if (priority) {
+    andClauses.push({ priority });
+  }
+  if (department) {
+    andClauses.push({ departmentId: department });
+  }
+  if (dateFrom || dateTo) {
+    const dateFilter = {};
+    if (dateFrom) {
+      dateFilter.$gte = new Date(dateFrom);
+    }
+    if (dateTo) {
+      dateFilter.$lte = new Date(dateTo);
+    }
+    andClauses.push({ createdAt: dateFilter });
+  }
+  if (q) {
+    const regex = new RegExp(escapeRegex(q), 'i');
+    andClauses.push({ $or: [{ subject: regex }, { body: regex }, { referenceNumber: regex }] });
+  }
+
+  const filter = { $and: andClauses };
+
+  const [memos, total] = await Promise.all([
+    Memo.find(filter)
+      .sort({ createdAt: -1 })
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum)
+      .populate('authorId', 'name')
+      .populate('departmentId', 'name'),
+    Memo.countDocuments(filter),
+  ]);
+
+  return { memos, total, page: pageNum, limit: limitNum };
+};
+
 // View privacy rule, regardless of status: only the author or a listed
 // workflow participant may view a memo. Any other same-org user gets 403.
 // Cross-organization access is handled one level up, by the 404 thrown when
@@ -278,6 +346,7 @@ module.exports = {
   createMemo,
   listMyMemos,
   listInbox,
+  searchMemos,
   getMemoById,
   updateMemo,
   deleteMemo,

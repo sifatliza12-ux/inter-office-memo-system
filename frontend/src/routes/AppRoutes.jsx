@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 
 import Login from '../pages/Login.jsx';
+import Register from '../pages/Register.jsx';
 import Home from '../pages/Home.jsx';
 import Administration from '../pages/Administration.jsx';
 import MyMemos from '../pages/MyMemos.jsx';
@@ -8,12 +9,14 @@ import MemoForm from '../pages/MemoForm.jsx';
 import MemoDetail from '../pages/MemoDetail.jsx';
 import Inbox from '../pages/Inbox.jsx';
 import Dashboard from '../pages/Dashboard.jsx';
+import Search from '../pages/Search.jsx';
 import ProtectedRoute from './ProtectedRoute.jsx';
 
 function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
       <Route
         path="/"
         element={
@@ -51,6 +54,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/search"
+        element={
+          <ProtectedRoute>
+            <Search />
           </ProtectedRoute>
         }
       />

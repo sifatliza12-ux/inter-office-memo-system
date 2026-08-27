@@ -31,6 +31,22 @@ const listInbox = asyncHandler(async (req, res) => {
   res.status(200).json({ memos });
 });
 
+const searchMemos = asyncHandler(async (req, res) => {
+  const { q, status, category, priority, department, dateFrom, dateTo, page, limit } = req.query;
+  const result = await memoService.searchMemos(req.user.organizationId, req.user.id, {
+    q,
+    status,
+    category,
+    priority,
+    department,
+    dateFrom,
+    dateTo,
+    page,
+    limit,
+  });
+  res.status(200).json(result);
+});
+
 const getMemo = asyncHandler(async (req, res) => {
   const memo = await memoService.getMemoById(req.user.organizationId, req.params.id, req.user.id);
   res.status(200).json({ memo });
@@ -59,6 +75,7 @@ module.exports = {
   createMemo,
   listMyMemos,
   listInbox,
+  searchMemos,
   getMemo,
   updateMemo,
   deleteMemo,

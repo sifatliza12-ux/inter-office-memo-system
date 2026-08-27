@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const mongoose = require('mongoose');
 
@@ -23,4 +25,11 @@ afterAll(async () => {
   if (mongod) {
     await mongod.stop();
   }
+
+  // attachment.service.js writes real files to disk (deliberately not
+  // mocked, so upload/download tests exercise the real filesystem path) —
+  // the in-memory Mongo teardown above has no effect on those. Without
+  // this, every test run leaves orphaned files in uploads/ behind.
+  const uploadsDir = path.join(__dirname, '..', 'uploads');
+  fs.rmSync(uploadsDir, { recursive: true, force: true });
 });

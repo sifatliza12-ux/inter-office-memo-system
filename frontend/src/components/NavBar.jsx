@@ -28,6 +28,9 @@ function NavBar() {
         <NavLink to="/dashboard" className={linkClasses}>
           Dashboard
         </NavLink>
+        <NavLink to="/search" className={linkClasses}>
+          Search
+        </NavLink>
         {user.role === 'admin' && (
           <NavLink to="/admin" className={linkClasses}>
             Administration

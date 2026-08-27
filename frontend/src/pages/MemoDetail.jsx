@@ -9,6 +9,7 @@ import ApprovalActions from '../components/ApprovalActions.jsx';
 import AddParticipantControl from '../components/AddParticipantControl.jsx';
 import WorkflowTimeline from '../components/WorkflowTimeline.jsx';
 import CommentsSection from '../components/CommentsSection.jsx';
+import AttachmentsSection from '../components/AttachmentsSection.jsx';
 import NavBar from '../components/NavBar.jsx';
 
 function MemoDetail() {
@@ -182,6 +183,15 @@ function MemoDetail() {
           <div className="mt-1">
             <WorkflowTimeline steps={workflowSteps} />
           </div>
+        </div>
+
+        <div className="border-t border-gray-200 pt-4">
+          <AttachmentsSection
+            memoId={id}
+            canUpload={canComment}
+            currentUserId={currentUserId}
+            isAuthor={isAuthor}
+          />
         </div>
 
         <div className="border-t border-gray-200 pt-4">

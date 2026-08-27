@@ -3,7 +3,9 @@ const express = require('express');
 const memoController = require('../controllers/memo.controller');
 const workflowController = require('../controllers/workflow.controller');
 const commentController = require('../controllers/comment.controller');
+const attachmentController = require('../controllers/attachment.controller');
 const protect = require('../middleware/auth');
+const { uploadSingleFile } = require('../middleware/upload');
 
 const router = express.Router();
 
@@ -13,9 +15,11 @@ router.use(protect);
 
 router.post('/', memoController.createMemo);
 
-// Registered ahead of GET /:id so "mine"/"inbox" are never captured as :id.
+// Registered ahead of GET /:id so "mine"/"inbox"/"search" are never
+// captured as :id.
 router.get('/mine', memoController.listMyMemos);
 router.get('/inbox', memoController.listInbox);
+router.get('/search', memoController.searchMemos);
 
 router.get('/:id', memoController.getMemo);
 router.patch('/:id', memoController.updateMemo);
@@ -33,5 +37,13 @@ router.get('/:id/workflow', workflowController.getWorkflowHistory);
 // approve/reject/request-changes comments recorded on WorkflowStep above.
 router.post('/:id/comments', commentController.createComment);
 router.get('/:id/comments', commentController.listComments);
+
+// Attachments — stored on local disk under backend/uploads/ (gitignored),
+// never as static/public files; only ever served through the authorized
+// download endpoint below.
+router.post('/:id/attachments', uploadSingleFile, attachmentController.uploadAttachment);
+router.get('/:id/attachments', attachmentController.listAttachments);
+router.get('/:id/attachments/:attachmentId/download', attachmentController.downloadAttachment);
+router.delete('/:id/attachments/:attachmentId', attachmentController.deleteAttachment);
 
 module.exports = router;
