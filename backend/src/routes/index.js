@@ -1,5 +1,6 @@
 const express = require('express');
 
+const authRoutes = require('./auth.routes');
 const organizationRoutes = require('./organization.routes');
 const departmentRoutes = require('./department.routes');
 const userRoutes = require('./user.routes');
@@ -11,6 +12,7 @@ const auditLogRoutes = require('./auditLog.routes');
 
 const router = express.Router();
 
+router.use('/auth', authRoutes);
 router.use('/organizations', organizationRoutes);
 router.use('/departments', departmentRoutes);
 router.use('/users', userRoutes);

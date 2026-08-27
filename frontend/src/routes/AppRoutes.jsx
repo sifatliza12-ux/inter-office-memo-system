@@ -1,19 +1,21 @@
 import { Routes, Route } from 'react-router-dom';
 
-function Placeholder() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <h1 className="text-2xl font-semibold text-gray-800">
-        Inter-Office Memo Management System
-      </h1>
-    </div>
-  );
-}
+import Login from '../pages/Login.jsx';
+import Home from '../pages/Home.jsx';
+import ProtectedRoute from './ProtectedRoute.jsx';
 
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Placeholder />} />
+      <Route path="/login" element={<Login />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Home />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 }
