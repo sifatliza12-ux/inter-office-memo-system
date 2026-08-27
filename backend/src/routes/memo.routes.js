@@ -2,6 +2,7 @@ const express = require('express');
 
 const memoController = require('../controllers/memo.controller');
 const workflowController = require('../controllers/workflow.controller');
+const commentController = require('../controllers/comment.controller');
 const protect = require('../middleware/auth');
 
 const router = express.Router();
@@ -27,5 +28,10 @@ router.post('/:id/request-changes', workflowController.requestChanges);
 router.post('/:id/resubmit', workflowController.resubmitMemo);
 router.post('/:id/workflow/add-participant', workflowController.addParticipant);
 router.get('/:id/workflow', workflowController.getWorkflowHistory);
+
+// General discussion comments — a separate collection/thread from the
+// approve/reject/request-changes comments recorded on WorkflowStep above.
+router.post('/:id/comments', commentController.createComment);
+router.get('/:id/comments', commentController.listComments);
 
 module.exports = router;

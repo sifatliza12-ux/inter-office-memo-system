@@ -4,6 +4,7 @@ const WorkflowStep = require('../models/WorkflowStep');
 const ApiError = require('../utils/ApiError');
 const { generateMemoReferenceNumber } = require('./referenceNumber.service');
 const { assertDepartmentBelongsToOrg } = require('./user.service');
+const { notifyAwaitingApproval } = require('./notification.service');
 
 const ALLOWED_CATEGORIES = ['Administrative', 'Financial', 'Procurement', 'HR', 'Academic', 'Technical', 'General'];
 const ALLOWED_PRIORITIES = ['low', 'normal', 'high', 'urgent'];
@@ -267,6 +268,8 @@ const submitMemo = async (organizationId, id, requestingUserId) => {
     await WorkflowStep.deleteMany({ memoId: memo._id });
     throw error;
   }
+
+  await notifyAwaitingApproval(memo, createdSteps[0].userId);
 
   return { memo, workflowSteps: createdSteps };
 };

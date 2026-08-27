@@ -4,6 +4,13 @@ const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
 const ApiError = require('../utils/ApiError');
 const memoService = require('./memo.service');
+const {
+  notifyAwaitingApproval,
+  notifyFinalApproval,
+  notifyRejected,
+  notifyChangesRequested,
+  notifyParticipantAdded,
+} = require('./notification.service');
 
 const STEP_ORDER_INCREMENT = 10;
 
@@ -81,6 +88,13 @@ const approveMemo = async (organizationId, id, requestingUserId, comment) => {
   }
 
   await memo.save();
+
+  if (nextStep) {
+    await notifyAwaitingApproval(memo, nextStep.userId);
+  } else {
+    await notifyFinalApproval(memo);
+  }
+
   return memo;
 };
 
@@ -100,6 +114,7 @@ const rejectMemo = async (organizationId, id, requestingUserId, comment) => {
   memo.currentStepOrder = undefined;
   memo.currentStepSince = undefined;
   await memo.save();
+  await notifyRejected(memo);
 
   return memo;
 };
@@ -122,6 +137,7 @@ const requestChanges = async (organizationId, id, requestingUserId, comment) => 
   memo.currentStepOrder = undefined;
   memo.currentStepSince = undefined;
   await memo.save();
+  await notifyChangesRequested(memo);
 
   return memo;
 };
@@ -206,6 +222,7 @@ const resubmitMemo = async (organizationId, id, requestingUserId) => {
   memo.currentStepOrder = newStep.stepOrder;
   memo.currentStepSince = new Date();
   await memo.save();
+  await notifyAwaitingApproval(memo, newStep.userId);
 
   return memo;
 };
@@ -260,6 +277,7 @@ const addParticipant = async (organizationId, id, requestingUserId, { userId, re
     eventType: 'WORKFLOW_PARTICIPANT_ADDED',
     description: `${newParticipant.name} was added to the workflow for memo "${memo.subject}" (reason: ${reason})`,
   });
+  await notifyParticipantAdded(memo, userId);
 
   return { memo, workflowStep: newStep };
 };

@@ -1,10 +1,15 @@
 const express = require('express');
 
+const notificationController = require('../controllers/notification.controller');
+const protect = require('../middleware/auth');
+
 const router = express.Router();
 
-// Placeholder route - implementation pending in a future stage
-router.get('/', (req, res) => {
-  res.status(200).json({ message: 'Notification routes placeholder' });
-});
+router.use(protect);
+
+router.get('/unread-count', notificationController.getUnreadCount);
+router.get('/', notificationController.listNotifications);
+router.patch('/read-all', notificationController.markAllAsRead);
+router.patch('/:id/read', notificationController.markAsRead);
 
 module.exports = router;

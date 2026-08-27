@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import ApprovalActions from '../components/ApprovalActions.jsx';
 import AddParticipantControl from '../components/AddParticipantControl.jsx';
 import WorkflowTimeline from '../components/WorkflowTimeline.jsx';
+import CommentsSection from '../components/CommentsSection.jsx';
 import NavBar from '../components/NavBar.jsx';
 
 function MemoDetail() {
@@ -113,6 +114,12 @@ function MemoDetail() {
   const isCurrentApprover = memo.status === 'submitted' && memo.currentApproverId === currentUserId;
   const isAnyParticipant = workflowSteps.some((step) => (step.userId?._id || step.userId) === currentUserId);
   const canAddParticipant = isAnyParticipant && memo.status === 'submitted';
+  // Matches the backend's comment authorization exactly (author, or anyone
+  // with a WorkflowStep regardless of status) — deliberately not the same
+  // as canAddParticipant above, which also requires status === 'submitted'.
+  // Comments have no such restriction: they're allowed on approved/rejected
+  // memos too, and for an author who never became a participant themselves.
+  const canComment = isAuthor || isAnyParticipant;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -171,10 +178,14 @@ function MemoDetail() {
         </div>
 
         <div>
-          <p className="text-sm font-medium text-gray-700">Workflow timeline</p>
+          <p className="text-sm font-medium text-gray-700">Workflow History</p>
           <div className="mt-1">
             <WorkflowTimeline steps={workflowSteps} />
           </div>
+        </div>
+
+        <div className="border-t border-gray-200 pt-4">
+          <CommentsSection memoId={id} canComment={canComment} />
         </div>
 
         {isCurrentApprover && <ApprovalActions memoId={id} onActionComplete={fetchAll} />}

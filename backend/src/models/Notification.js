@@ -9,6 +9,11 @@ const notificationSchema = new Schema(
       ref: 'User',
       required: true,
     },
+    memoId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Memo',
+      required: true,
+    },
     title: {
       type: String,
       required: true,

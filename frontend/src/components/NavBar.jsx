@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 
 import { useAuth } from '../context/AuthContext.jsx';
+import NotificationBell from './NotificationBell.jsx';
 
 const linkClasses = ({ isActive }) =>
   `text-sm font-medium ${isActive ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`;
@@ -34,6 +35,7 @@ function NavBar() {
         )}
       </div>
       <div className="flex items-center gap-3">
+        <NotificationBell />
         <span className="text-sm text-gray-500">{user.name}</span>
         <button
           onClick={logout}
