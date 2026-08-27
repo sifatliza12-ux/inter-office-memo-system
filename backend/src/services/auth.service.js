@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
 const { generateToken } = require('../utils/jwt');
+const { logAuditEvent } = require('./audit.service');
 
 const SALT_ROUNDS = 10;
 
@@ -36,7 +37,27 @@ const login = async ({ email, password }) => {
     departmentId: user.departmentId ? user.departmentId.toString() : null,
   });
 
+  await logAuditEvent({
+    organizationId: user.organizationId,
+    userId: user._id,
+    eventType: 'USER_LOGIN',
+    description: `${user.name} logged in.`,
+  });
+
   return { token, user };
+};
+
+// No token blocklisting/invalidation — out of scope for this stage. This
+// endpoint's only real job is giving logout an audit trail.
+const logout = async (userId, organizationId) => {
+  const user = await User.findById(userId).select('name');
+
+  await logAuditEvent({
+    organizationId,
+    userId,
+    eventType: 'USER_LOGOUT',
+    description: `${user ? user.name : 'A user'} logged out.`,
+  });
 };
 
 const getCurrentUser = async (userId) => {
@@ -49,4 +70,4 @@ const getCurrentUser = async (userId) => {
   return user;
 };
 
-module.exports = { login, getCurrentUser, hashPassword };
+module.exports = { login, logout, getCurrentUser, hashPassword };

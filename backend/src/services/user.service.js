@@ -3,6 +3,7 @@ const Department = require('../models/Department');
 const ApiError = require('../utils/ApiError');
 const { isValidEmail } = require('../utils/validators');
 const { hashPassword } = require('./auth.service');
+const { logAuditEvent } = require('./audit.service');
 
 const ALLOWED_STATUSES = ['active', 'inactive', 'suspended'];
 
@@ -19,7 +20,11 @@ const assertDepartmentBelongsToOrg = async (organizationId, departmentId) => {
   }
 };
 
-const createUser = async (organizationId, { name, email, password, role, designation, departmentId }) => {
+const createUser = async (
+  organizationId,
+  requestingUserId,
+  { name, email, password, role, designation, departmentId }
+) => {
   if (!name || !email || !password) {
     throw new ApiError(400, 'name, email, and password are required');
   }
@@ -36,7 +41,7 @@ const createUser = async (organizationId, { name, email, password, role, designa
 
   const hashedPassword = await hashPassword(password);
 
-  return User.create({
+  const user = await User.create({
     organizationId,
     departmentId: departmentId || undefined,
     name,
@@ -45,6 +50,15 @@ const createUser = async (organizationId, { name, email, password, role, designa
     role,
     designation,
   });
+
+  await logAuditEvent({
+    organizationId,
+    userId: requestingUserId,
+    eventType: 'USER_CREATED',
+    description: `${user.name} (${user.email}) was created.`,
+  });
+
+  return user;
 };
 
 const listUsers = async (organizationId, { status, departmentId, role } = {}) => {
@@ -111,6 +125,14 @@ const updateUserStatus = async (organizationId, id, status, requestingUserId) =>
   const user = await getUserById(organizationId, id);
   user.status = status;
   await user.save();
+
+  await logAuditEvent({
+    organizationId,
+    userId: requestingUserId,
+    eventType: status === 'active' ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
+    description: `${user.name} was ${status === 'active' ? 'activated' : `deactivated (status: ${status})`}.`,
+  });
+
   return user;
 };
 

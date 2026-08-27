@@ -38,7 +38,15 @@ export function AuthProvider({ children }) {
     return data.user;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Best-effort: this call only exists to give logout an audit trail, so a
+    // network failure here must never prevent the user from actually
+    // logging out locally.
+    try {
+      await api.post('/auth/logout');
+    } catch (error) {
+      // Ignored — see above.
+    }
     clearToken();
     setUser(null);
   };

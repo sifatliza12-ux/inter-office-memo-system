@@ -2,7 +2,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const userService = require('../services/user.service');
 
 const createUser = asyncHandler(async (req, res) => {
-  const user = await userService.createUser(req.user.organizationId, req.body);
+  const user = await userService.createUser(req.user.organizationId, req.user.id, req.body);
   res.status(201).json({ user });
 });
 

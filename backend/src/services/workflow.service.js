@@ -1,7 +1,6 @@
 const Memo = require('../models/Memo');
 const WorkflowStep = require('../models/WorkflowStep');
 const User = require('../models/User');
-const AuditLog = require('../models/AuditLog');
 const ApiError = require('../utils/ApiError');
 const memoService = require('./memo.service');
 const {
@@ -11,6 +10,7 @@ const {
   notifyChangesRequested,
   notifyParticipantAdded,
 } = require('./notification.service');
+const { logAuditEvent } = require('./audit.service');
 
 const STEP_ORDER_INCREMENT = 10;
 
@@ -95,6 +95,22 @@ const approveMemo = async (organizationId, id, requestingUserId, comment) => {
     await notifyFinalApproval(memo);
   }
 
+  await logAuditEvent({
+    organizationId,
+    userId: requestingUserId,
+    eventType: 'WORKFLOW_APPROVED',
+    description: `Memo ${memo.referenceNumber} ("${memo.subject}") was approved at this step.`,
+  });
+
+  if (!nextStep) {
+    await logAuditEvent({
+      organizationId,
+      userId: requestingUserId,
+      eventType: 'WORKFLOW_COMPLETED',
+      description: `Memo ${memo.referenceNumber} ("${memo.subject}") completed its approval workflow.`,
+    });
+  }
+
   return memo;
 };
 
@@ -115,6 +131,13 @@ const rejectMemo = async (organizationId, id, requestingUserId, comment) => {
   memo.currentStepSince = undefined;
   await memo.save();
   await notifyRejected(memo);
+
+  await logAuditEvent({
+    organizationId,
+    userId: requestingUserId,
+    eventType: 'WORKFLOW_REJECTED',
+    description: `Memo ${memo.referenceNumber} ("${memo.subject}") was rejected: ${comment}`,
+  });
 
   return memo;
 };
@@ -138,6 +161,13 @@ const requestChanges = async (organizationId, id, requestingUserId, comment) => 
   memo.currentStepSince = undefined;
   await memo.save();
   await notifyChangesRequested(memo);
+
+  await logAuditEvent({
+    organizationId,
+    userId: requestingUserId,
+    eventType: 'CHANGE_REQUESTED',
+    description: `Changes were requested on memo ${memo.referenceNumber} ("${memo.subject}"): ${comment}`,
+  });
 
   return memo;
 };
@@ -224,6 +254,13 @@ const resubmitMemo = async (organizationId, id, requestingUserId) => {
   await memo.save();
   await notifyAwaitingApproval(memo, newStep.userId);
 
+  await logAuditEvent({
+    organizationId,
+    userId: requestingUserId,
+    eventType: 'MEMO_RESUBMITTED',
+    description: `Memo ${memo.referenceNumber} ("${memo.subject}") was resubmitted for approval.`,
+  });
+
   return memo;
 };
 
@@ -271,7 +308,7 @@ const addParticipant = async (organizationId, id, requestingUserId, { userId, re
   memo.workflowParticipants.push(userId);
   await memo.save();
 
-  await AuditLog.create({
+  await logAuditEvent({
     organizationId,
     userId: requestingUserId,
     eventType: 'WORKFLOW_PARTICIPANT_ADDED',

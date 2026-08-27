@@ -3,6 +3,7 @@ const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
 const { isValidEmail } = require('../utils/validators');
 const { hashPassword } = require('./auth.service');
+const { logAuditEvent } = require('./audit.service');
 
 const createOrganizationWithAdmin = async ({
   name,
@@ -54,6 +55,13 @@ const createOrganizationWithAdmin = async ({
     password: hashedPassword,
     role: 'admin',
     designation: adminDesignation,
+  });
+
+  await logAuditEvent({
+    organizationId: organization._id,
+    userId: adminUser._id,
+    eventType: 'USER_CREATED',
+    description: `${adminUser.name} (${adminUser.email}) was created as the initial admin for ${organization.name}.`,
   });
 
   return { organization, user: adminUser };

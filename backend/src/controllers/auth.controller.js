@@ -12,4 +12,9 @@ const getMe = asyncHandler(async (req, res) => {
   res.status(200).json({ user });
 });
 
-module.exports = { login, getMe };
+const logout = asyncHandler(async (req, res) => {
+  await authService.logout(req.user.id, req.user.organizationId);
+  res.status(200).json({ message: 'Logged out' });
+});
+
+module.exports = { login, getMe, logout };

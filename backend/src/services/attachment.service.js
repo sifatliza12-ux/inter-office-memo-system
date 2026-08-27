@@ -6,6 +6,7 @@ const Attachment = require('../models/Attachment');
 const Memo = require('../models/Memo');
 const WorkflowStep = require('../models/WorkflowStep');
 const ApiError = require('../utils/ApiError');
+const { logAuditEvent } = require('./audit.service');
 
 // Overridable so the test suite can point this at its own throwaway
 // directory instead of the real backend/uploads/ — otherwise the test
@@ -113,8 +114,9 @@ const uploadAttachment = async (organizationId, memoId, requestingUserId, file) 
   await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
   await fs.promises.writeFile(absolutePath, file.buffer);
 
+  let attachment;
   try {
-    return await Attachment.create({
+    attachment = await Attachment.create({
       memoId: memo._id,
       organizationId,
       filename: file.originalname,
@@ -128,6 +130,15 @@ const uploadAttachment = async (organizationId, memoId, requestingUserId, file) 
     await fs.promises.unlink(absolutePath).catch(() => {});
     throw error;
   }
+
+  await logAuditEvent({
+    organizationId,
+    userId: requestingUserId,
+    eventType: 'ATTACHMENT_UPLOADED',
+    description: `File "${file.originalname}" was uploaded to memo ${memo.referenceNumber} ("${memo.subject}").`,
+  });
+
+  return attachment;
 };
 
 const listAttachments = async (organizationId, memoId, requestingUserId) => {
@@ -170,6 +181,13 @@ const deleteAttachment = async (organizationId, memoId, attachmentId, requesting
   assertCanDeleteAttachment(memo, attachment, requestingUserId);
 
   await attachment.deleteOne();
+
+  await logAuditEvent({
+    organizationId,
+    userId: requestingUserId,
+    eventType: 'ATTACHMENT_DELETED',
+    description: `File "${attachment.filename}" was deleted from memo ${memo.referenceNumber} ("${memo.subject}").`,
+  });
 
   const absolutePath = path.join(UPLOADS_DIR, attachment.storedFilename);
   await fs.promises.unlink(absolutePath).catch((error) => {

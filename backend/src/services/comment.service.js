@@ -3,6 +3,7 @@ const Memo = require('../models/Memo');
 const WorkflowStep = require('../models/WorkflowStep');
 const ApiError = require('../utils/ApiError');
 const { notifyNewComment } = require('./notification.service');
+const { logAuditEvent } = require('./audit.service');
 
 const MAX_COMMENT_LENGTH = 5000;
 
@@ -52,6 +53,13 @@ const createComment = async (organizationId, memoId, requestingUserId, text) => 
     (id) => id !== String(requestingUserId)
   );
   await notifyNewComment(memo, recipientIds);
+
+  await logAuditEvent({
+    organizationId,
+    userId: requestingUserId,
+    eventType: 'COMMENT_ADDED',
+    description: `A comment was added to memo ${memo.referenceNumber} ("${memo.subject}").`,
+  });
 
   return comment.populate('authorId', 'name');
 };

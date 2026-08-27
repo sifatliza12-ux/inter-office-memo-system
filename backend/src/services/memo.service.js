@@ -5,6 +5,7 @@ const ApiError = require('../utils/ApiError');
 const { generateMemoReferenceNumber } = require('./referenceNumber.service');
 const { assertDepartmentBelongsToOrg } = require('./user.service');
 const { notifyAwaitingApproval } = require('./notification.service');
+const { logAuditEvent } = require('./audit.service');
 
 const ALLOWED_CATEGORIES = ['Administrative', 'Financial', 'Procurement', 'HR', 'Academic', 'Technical', 'General'];
 const ALLOWED_PRIORITIES = ['low', 'normal', 'high', 'urgent'];
@@ -55,7 +56,7 @@ const createMemo = async (organizationId, authorId, authorDepartmentId, payload)
 
   const referenceNumber = await generateMemoReferenceNumber(organizationId);
 
-  return Memo.create({
+  const memo = await Memo.create({
     organizationId,
     authorId,
     departmentId: resolvedDepartmentId || undefined,
@@ -67,6 +68,15 @@ const createMemo = async (organizationId, authorId, authorDepartmentId, payload)
     referenceNumber,
     status: 'draft',
   });
+
+  await logAuditEvent({
+    organizationId,
+    userId: authorId,
+    eventType: 'MEMO_CREATED',
+    description: `Memo ${memo.referenceNumber} ("${memo.subject}") was created.`,
+  });
+
+  return memo;
 };
 
 const listMyMemos = async (organizationId, authorId, { status, category, priority } = {}) => {
@@ -274,6 +284,14 @@ const updateMemo = async (organizationId, id, requestingUserId, payload) => {
   }
 
   await memo.save();
+
+  await logAuditEvent({
+    organizationId,
+    userId: requestingUserId,
+    eventType: 'MEMO_MODIFIED',
+    description: `Memo ${memo.referenceNumber} ("${memo.subject}") was modified.`,
+  });
+
   return memo;
 };
 
@@ -338,6 +356,29 @@ const submitMemo = async (organizationId, id, requestingUserId) => {
   }
 
   await notifyAwaitingApproval(memo, createdSteps[0].userId);
+
+  await logAuditEvent({
+    organizationId,
+    userId: requestingUserId,
+    eventType: 'MEMO_SUBMITTED',
+    description: `Memo ${memo.referenceNumber} ("${memo.subject}") was submitted for approval.`,
+  });
+
+  // Describes WHO was assigned, as a separate event from the submission
+  // itself. Names resolved in workflowParticipants order (the same order
+  // the steps above were created in), not just IDs, so this reads clearly
+  // to an admin without a second lookup.
+  const participantUsers = await User.find({ _id: { $in: memo.workflowParticipants } }).select('name');
+  const nameById = new Map(participantUsers.map((user) => [user._id.toString(), user.name]));
+  const participantNames = memo.workflowParticipants.map(
+    (userId) => nameById.get(userId.toString()) || 'Unknown user'
+  );
+  await logAuditEvent({
+    organizationId,
+    userId: requestingUserId,
+    eventType: 'WORKFLOW_ASSIGNED',
+    description: `Workflow for memo ${memo.referenceNumber} was assigned to: ${participantNames.join(', ')}.`,
+  });
 
   return { memo, workflowSteps: createdSteps };
 };

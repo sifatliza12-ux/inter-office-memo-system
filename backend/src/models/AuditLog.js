@@ -27,4 +27,7 @@ const auditLogSchema = new Schema(
   { timestamps: true }
 );
 
+// Supports the tenant-scoped, newest-first audit log listing (Stage 9).
+auditLogSchema.index({ organizationId: 1, createdAt: -1 });
+
 module.exports = mongoose.model('AuditLog', auditLogSchema);
