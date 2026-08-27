@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { getMemo, createMemo, updateMemo, submitMemo } from '../services/memos';
+import { resubmitMemo } from '../services/workflow';
 import { getDirectory } from '../services/directory';
 import ParticipantPicker from '../components/ParticipantPicker.jsx';
 
@@ -27,6 +28,7 @@ function MemoForm() {
   const [loading, setLoading] = useState(isEditing);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [memoStatus, setMemoStatus] = useState('draft');
 
   useEffect(() => {
     getDirectory()
@@ -42,10 +44,11 @@ function MemoForm() {
     getMemo(id)
       .then(({ data }) => {
         const memo = data.memo;
-        if (memo.status !== 'draft') {
+        if (memo.status !== 'draft' && memo.status !== 'changes_requested') {
           navigate(`/memos/${id}`, { replace: true });
           return;
         }
+        setMemoStatus(memo.status);
         setForm({
           subject: memo.subject,
           body: memo.body,
@@ -87,6 +90,8 @@ function MemoForm() {
     }
   };
 
+  const isResubmit = isEditing && memoStatus === 'changes_requested';
+
   const saveAndSubmit = async () => {
     setError('');
     setSubmitting(true);
@@ -98,7 +103,11 @@ function MemoForm() {
         const { data } = await createMemo(buildPayload());
         memoId = data.memo._id;
       }
-      await submitMemo(memoId);
+      if (isResubmit) {
+        await resubmitMemo(memoId);
+      } else {
+        await submitMemo(memoId);
+      }
       navigate(`/memos/${memoId}`);
     } catch (submitError) {
       setError(submitError.response?.data?.message || 'Failed to submit memo');
@@ -218,7 +227,7 @@ function MemoForm() {
             onClick={saveAndSubmit}
             className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            Submit
+            {isResubmit ? 'Resubmit' : 'Submit'}
           </button>
         </div>
       </form>

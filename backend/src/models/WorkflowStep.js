@@ -21,7 +21,7 @@ const workflowStepSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'approved', 'rejected', 'skipped'],
+      enum: ['pending', 'approved', 'rejected', 'changes_requested'],
       default: 'pending',
     },
     actionDate: {

@@ -39,7 +39,16 @@ const memoSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ['draft', 'submitted', 'pending', 'in_review', 'approved', 'rejected', 'published'],
+      enum: [
+        'draft',
+        'submitted',
+        'changes_requested',
+        'pending',
+        'in_review',
+        'approved',
+        'rejected',
+        'published',
+      ],
       default: 'draft',
     },
     workflowParticipants: [
@@ -54,6 +63,23 @@ const memoSchema = new Schema(
       trim: true,
     },
     submittedAt: {
+      type: Date,
+    },
+    // Cache only — always derived from the WorkflowStep with status
+    // 'pending' and the lowest stepOrder. Never trusted as ground truth for
+    // authorization; recomputed and kept in sync by every workflow action.
+    currentApproverId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    currentStepOrder: {
+      type: Number,
+    },
+    finalApproverId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    finalApprovedAt: {
       type: Date,
     },
   },

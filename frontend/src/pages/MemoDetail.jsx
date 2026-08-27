@@ -2,35 +2,41 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { getMemo, deleteMemo, submitMemo } from '../services/memos';
+import { getWorkflow, resubmitMemo } from '../services/workflow';
 import { getDirectory } from '../services/directory';
+import { useAuth } from '../context/AuthContext.jsx';
+import ApprovalActions from '../components/ApprovalActions.jsx';
+import AddParticipantControl from '../components/AddParticipantControl.jsx';
+import WorkflowTimeline from '../components/WorkflowTimeline.jsx';
 
 function MemoDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
 
   const [memo, setMemo] = useState(null);
+  const [workflowSteps, setWorkflowSteps] = useState([]);
   const [directory, setDirectory] = useState({ users: [], departments: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const fetchMemo = useCallback(async () => {
-    setLoading(true);
+  const fetchAll = useCallback(async () => {
     setError('');
     try {
-      const { data } = await getMemo(id);
-      setMemo(data.memo);
+      const [memoResponse, workflowResponse] = await Promise.all([getMemo(id), getWorkflow(id)]);
+      setMemo(memoResponse.data.memo);
+      setWorkflowSteps(workflowResponse.data.workflowSteps);
     } catch (fetchError) {
       setError(fetchError.response?.data?.message || 'Failed to load memo');
-    } finally {
-      setLoading(false);
     }
   }, [id]);
 
   useEffect(() => {
-    fetchMemo();
-  }, [fetchMemo]);
+    setLoading(true);
+    fetchAll().finally(() => setLoading(false));
+  }, [fetchAll]);
 
   useEffect(() => {
     getDirectory()
@@ -59,9 +65,22 @@ function MemoDetail() {
     setBusy(true);
     try {
       await submitMemo(id);
-      await fetchMemo();
+      await fetchAll();
     } catch (submitError) {
       setActionError(submitError.response?.data?.message || 'Failed to submit memo');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleResubmit = async () => {
+    setActionError('');
+    setBusy(true);
+    try {
+      await resubmitMemo(id);
+      await fetchAll();
+    } catch (resubmitError) {
+      setActionError(resubmitError.response?.data?.message || 'Failed to resubmit memo');
     } finally {
       setBusy(false);
     }
@@ -86,7 +105,13 @@ function MemoDetail() {
     );
   }
 
+  const currentUserId = currentUser?._id;
+  const isAuthor = memo.authorId === currentUserId;
   const isDraft = memo.status === 'draft';
+  const isChangesRequested = memo.status === 'changes_requested';
+  const isCurrentApprover = memo.status === 'submitted' && memo.currentApproverId === currentUserId;
+  const isAnyParticipant = workflowSteps.some((step) => (step.userId?._id || step.userId) === currentUserId);
+  const canAddParticipant = isAnyParticipant && memo.status === 'submitted';
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -117,6 +142,9 @@ function MemoDetail() {
             <span className="text-gray-500">Department:</span> {departmentName(memo.departmentId) || 'None'}
           </div>
           <div>
+            <span className="text-gray-500">Author:</span> {userName(memo.authorId)}
+          </div>
+          <div>
             <span className="text-gray-500">Created:</span> {new Date(memo.createdAt).toLocaleString()}
           </div>
           <div>
@@ -127,6 +155,12 @@ function MemoDetail() {
               <span className="text-gray-500">Submitted:</span> {new Date(memo.submittedAt).toLocaleString()}
             </div>
           )}
+          {memo.finalApprovedAt && (
+            <div>
+              <span className="text-gray-500">Final approval:</span>{' '}
+              {new Date(memo.finalApprovedAt).toLocaleString()} by {userName(memo.finalApproverId)}
+            </div>
+          )}
         </div>
 
         <div>
@@ -135,19 +169,24 @@ function MemoDetail() {
         </div>
 
         <div>
-          <p className="text-sm font-medium text-gray-700">Workflow participant sequence</p>
-          {memo.workflowParticipants && memo.workflowParticipants.length > 0 ? (
-            <ol className="mt-1 list-decimal pl-5 text-sm text-gray-800">
-              {memo.workflowParticipants.map((participantId) => (
-                <li key={participantId}>{userName(participantId)}</li>
-              ))}
-            </ol>
-          ) : (
-            <p className="mt-1 text-sm text-gray-400">No participants selected yet.</p>
-          )}
+          <p className="text-sm font-medium text-gray-700">Workflow timeline</p>
+          <div className="mt-1">
+            <WorkflowTimeline steps={workflowSteps} />
+          </div>
         </div>
 
-        {isDraft ? (
+        {isCurrentApprover && <ApprovalActions memoId={id} onActionComplete={fetchAll} />}
+
+        {canAddParticipant && (
+          <AddParticipantControl
+            memoId={id}
+            users={directory.users}
+            existingParticipantIds={memo.workflowParticipants}
+            onActionComplete={fetchAll}
+          />
+        )}
+
+        {isDraft && isAuthor && (
           <div className="flex gap-2 pt-2">
             <Link
               to={`/memos/${id}/edit`}
@@ -170,8 +209,28 @@ function MemoDetail() {
               Delete
             </button>
           </div>
-        ) : (
-          <p className="pt-2 text-sm text-gray-500">This memo has been submitted and is read-only.</p>
+        )}
+
+        {isChangesRequested && isAuthor && (
+          <div className="flex gap-2 pt-2">
+            <Link
+              to={`/memos/${id}/edit`}
+              className="rounded bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600"
+            >
+              Edit
+            </Link>
+            <button
+              onClick={handleResubmit}
+              disabled={busy}
+              className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              Resubmit
+            </button>
+          </div>
+        )}
+
+        {!isDraft && !isChangesRequested && !isCurrentApprover && !canAddParticipant && (
+          <p className="pt-2 text-sm text-gray-500">This memo is read-only for you at this stage.</p>
         )}
       </div>
     </div>

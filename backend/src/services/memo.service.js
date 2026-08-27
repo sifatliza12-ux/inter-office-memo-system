@@ -127,8 +127,8 @@ const getMemoForMutation = async (organizationId, id, requestingUserId) => {
 const updateMemo = async (organizationId, id, requestingUserId, payload) => {
   const memo = await getMemoForMutation(organizationId, id, requestingUserId);
 
-  if (memo.status !== 'draft') {
-    throw new ApiError(400, 'Only a draft memo can be edited');
+  if (memo.status !== 'draft' && memo.status !== 'changes_requested') {
+    throw new ApiError(400, 'Only a draft or changes-requested memo can be edited');
   }
 
   const { subject, body, category, priority, departmentId, workflowParticipants } = payload;
@@ -205,8 +205,16 @@ const submitMemo = async (organizationId, id, requestingUserId) => {
     throw new ApiError(500, 'Failed to create the approval workflow for this memo; submission was not completed');
   }
 
+  const createdSteps = await WorkflowStep.find({ memoId: memo._id }).sort({ stepOrder: 1 });
+
   memo.status = 'submitted';
   memo.submittedAt = new Date();
+  // The current step is always the first one at submission time (lowest
+  // stepOrder, all freshly created as 'pending') — cache it now so the
+  // invariant "cache matches a fresh computation" holds from this moment on,
+  // not just after the first workflow action.
+  memo.currentApproverId = createdSteps[0].userId;
+  memo.currentStepOrder = createdSteps[0].stepOrder;
 
   try {
     await memo.save();
@@ -217,7 +225,6 @@ const submitMemo = async (organizationId, id, requestingUserId) => {
     throw error;
   }
 
-  const createdSteps = await WorkflowStep.find({ memoId: memo._id }).sort({ stepOrder: 1 });
   return { memo, workflowSteps: createdSteps };
 };
 
