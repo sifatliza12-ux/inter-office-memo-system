@@ -28,7 +28,7 @@ The same file also holds the read-side operations (`listNotifications`, `markAsR
 
 ### Comment service
 
-`comment.service.js` follows `workflow.service.js`'s own pattern almost exactly, since the spec explicitly said to reuse Stage 5's add-participant authorization rule: `assertCanAccessComments` checks `memo.authorId` first, then falls back to an independent `WorkflowStep.findOne({ memoId, userId })` query — never a client-supplied claim — covering the author, and any past/current/future participant, before rejecting everyone else with 403. `createComment` validates non-empty (after trim) and a 5000-character max, creates the `Comment`, then computes notification recipients as *every distinct `WorkflowStep.userId` on this memo* minus the commenter — not "every comment-authorized person," which would also silently include the memo's author even when the author never became a workflow participant. That's a literal reading of the spec's "notify everyone with a WorkflowStep on the memo... except the comment's author" — the author only gets notified about a comment if the author also happens to hold a WorkflowStep.
+`comment.service.js` follows `workflow.service.js`'s own pattern almost exactly, since the spec explicitly said to reuse Stage 5's add-participant authorization rule: `assertCanAccessComments` checks `memo.authorId` first, then falls back to an independent `WorkflowStep.findOne({ memoId, userId })` query — never a client-supplied claim — covering the author, and any past/current/future participant, before rejecting everyone else with 403. `createComment` validates non-empty (after trim) and a 5000-character max, creates the `Comment`, then notifies recipients. **As originally shipped**, recipients were every distinct `WorkflowStep.userId` on the memo minus the commenter — a literal reading of the spec's "notify everyone with a WorkflowStep on the memo... except the comment's author," under which the author only got notified if they also happened to hold a `WorkflowStep`. **This was changed in a same-session follow-up (§8)** to always include the author as a recipient too, still excluding the commenter — see §8 for why and what changed.
 
 ### Wiring into Stages 5/6's existing services
 
@@ -53,7 +53,11 @@ Two new files:
 
 **The forced-failure test** (`describe('Notification creation resilience')`) uses `jest.spyOn(Notification, 'create').mockRejectedValueOnce(...)` around a real `POST /:id/approve` call, asserting the response is still `200` with the memo correctly advanced, and separately asserts `console.error` was actually called — so the test proves both halves of the requirement: the failure doesn't propagate, and it isn't silently swallowed without a trace either. The spy is restored at the end of the test rather than left in place for the rest of the file.
 
-One thing corrected mid-draft rather than shipped as written: an early draft of the "resubmit notifies again" test's own mark-all-read companion test tried to generate its two users' notifications via a real `createSubmittedWorkflow` call passed a nonexistent `workflowParticipantOverride` option — that helper always creates its own fresh participants regardless of any such option, so the call was silently testing nothing relevant. Caught on a re-read before running anything, and replaced with direct `Notification.create([...])` seeding, since the endpoint's own mechanics (not event-triggered creation, already covered elsewhere) are what that specific test is about.
+Three things were caught and corrected mid-draft rather than shipped as first written:
+
+- The first draft of the "submit notifies the first participant" test included `expect(notifications[0].message).toContain(participants[0] && '')` — `participants[0] && ''` always evaluates to `''`, and `toContain('')` is trivially true for any string, so the assertion tested nothing.
+- The immediate fix attempt was `expect(notifications[0].message).toContain(org.payload.name === 'Acme Corp' ? '' : '')` — the same bug in a different shape (both ternary branches are `''`). Caught on the next re-read, not by a failing test — a tautological assertion can't fail either way, which is exactly the danger of it. The actual fix used `referenceNumber`, already returned by `createSubmittedWorkflow`, to assert the notification message genuinely names the memo it's about.
+- An early draft of the mark-all-read test tried to generate its two users' notifications via a real `createSubmittedWorkflow` call passed a nonexistent `workflowParticipantOverride` option — that helper always creates its own fresh participants regardless of any such option, so the call was silently testing nothing relevant. Caught on a re-read before running anything, and replaced with direct `Notification.create([...])` seeding, since the endpoint's own mechanics (not event-triggered creation, already covered elsewhere) are what that specific test is about.
 
 **Full suite result: 104/104 passing** (85 carried over from Stages 1–6, 19 new). Re-run a second time after manual verification's temporary server was stopped, to confirm nothing had drifted — same result.
 
@@ -81,6 +85,46 @@ Run against a real temporary MongoDB and the real backend server, via the same s
 ## 6. Tradeoffs and things explicitly flagged rather than silently decided
 
 - **`canComment`'s frontend condition** (§4) intentionally does not literally reuse `canAddParticipant`, because doing so would contradict the backend authorization rule stated earlier in the same spec. Flagged in a code comment at the point of the decision, not just here.
-- **Comment notification recipients are scoped to `WorkflowStep` holders only**, not "everyone who can view/comment on the memo" — so an author who never became a participant themselves does not get notified about others' comments on their own memo. This is a literal reading of the spec's own wording ("everyone with a WorkflowStep... except the comment's author"), not an oversight; worth flagging since the more intuitive behavior (the author always hears about comments on their memo) is not what was implemented.
+- **Comment notification recipients were originally scoped to `WorkflowStep` holders only**, not "everyone who can view/comment on the memo" — so an author who never became a participant themselves did not get notified about others' comments on their own memo. This was a literal reading of the spec's own wording at the time. **Resolved in §8** — the user asked for the more intuitive behavior (the author always hears about comments on their own memo) in a same-session follow-up, and it was implemented there.
 - **`Notification.memoId` is required**, not optional — every notification in this stage's scope is memo-related, and an unenforced-but-usually-present field seemed worse than an enforced one, given nothing in this stage needs a non-memo notification to exist.
 - The Stage 6 postmortem's lesson about orphaned background processes from manual-verification scripts was applied proactively here (§5) rather than rediscovered the hard way a second time.
+
+---
+
+## 7. Follow-up: confirming the forced-failure test exists
+
+The user asked, in a later turn, whether a test exists that forces notification creation to fail and asserts the triggering action still succeeds — and to add one if not. It already existed (§3). Rather than answer from memory of having written it, `grep -n "describe(\|it(" tests/notifications.test.js | grep -A1 -B1 -i "resilien\|fail"` was run to locate and confirm it precisely, in case it had been renamed or removed since. Confirmed: `backend/tests/notifications.test.js`, `describe('Notification creation resilience')` → `it('does not fail the approve action when notification creation throws')`. Reported the file, exact test name, and a walkthrough of its mechanics back to the user. No code was changed — the request was to confirm, not to add.
+
+---
+
+## 8. Follow-up: always notifying the author, even without a WorkflowStep
+
+The user asked to extend general-comment notification recipients to always include the memo's author (in addition to `WorkflowStep` holders), still excluding the commenter from being notified about their own comment — resolving exactly the tradeoff flagged in §2/§6 as shipped. Explicitly scoped as "no other changes."
+
+`comment.service.js`'s recipient computation changed from:
+
+```js
+const recipientIds = [...new Set(participantIds.map(String))].filter((id) => id !== String(requestingUserId));
+```
+
+to:
+
+```js
+const recipientIds = [...new Set([...participantIds.map(String), memo.authorId.toString()])].filter(
+  (id) => id !== String(requestingUserId)
+);
+```
+
+— unioning in `memo.authorId` before excluding the commenter, so the exclusion still correctly suppresses a self-notification in the one case where the author *is* the commenter.
+
+**Test added** to `notifications.test.js`, in the same describe block as the existing "does not notify the comment author about their own comment" test: confirms the premise directly (`WorkflowStep.findOne({ memoId, userId: admin._id })` is `null` — true of every existing test fixture already, since `createSubmittedWorkflow` never adds the author as a participant by default, not something specially arranged for this test), then asserts a comment-titled notification appears for the author after a *participant* comments, and that the count stays at 1 (not 2) after the *author* comments themselves — proving both the addition and the exclusion in one test.
+
+`npm test` → **105/105 passing** (104 + 1 new). No other files were touched, confirmed by reviewing exactly what had changed before reporting back.
+
+---
+
+## 9. Follow-up: a full chronological transcript, then merged back into this document
+
+The user asked for a full, chronological transcript of this session's Stage 7 work — including the failed attempts and corrections from §3 and §8 in more granular form than this narrative doc's topic-based structure gives them — to be saved as `ai-history/stage-7-comments,notifications.md`. Since that literal filename (comma included) would have collided with *this* file's name if the comma were read as a typo for a hyphen, the transcript was saved separately first, as `ai-history/stage-7-transcript.md`, with the naming ambiguity flagged back to the user rather than silently overwriting this document.
+
+The user's next instruction was simply "merge" — folding the transcript's content into this document rather than keeping two files. That merge is what produced the corrections above: §2 and §3 were expanded to include the two additional mid-draft mistakes the transcript had captured but this document originally hadn't (the tautological test assertion and its equally-broken first fix attempt), §2's description of comment-notification scope and §6's corresponding tradeoff bullet were corrected to stop describing the pre-§8 behavior as current, and this section plus §7 and §8 were added to bring the later turns (confirming the resilience test, extending notification scope, and this merge itself) into the same document instead of a separate one. `ai-history/stage-7-transcript.md` was deleted once its content was folded in here, so no stale duplicate is left behind.
