@@ -8,7 +8,7 @@
 
 ## 1. Starting point
 
-Stages 1–5 were confirmed complete and working (84... actually 71 at the time) before any Stage 6 code was written. Rather than trust a summary of what Stages 1–5 built, the actual model files, service files, controllers, routes, middleware, and existing tests were read in full first — in particular `Memo.js`, `WorkflowStep.js`, `memo.service.js`, `workflow.service.js`, `memo.routes.js`, `auth.js`/`role.js` middleware, and the existing frontend pages (`MyMemos.jsx`, `MemoDetail.jsx`, `Administration.jsx`, `AuthContext.jsx`, `AppRoutes.jsx`) — before deciding how Stage 6 should fit in.
+Stages 1–5 were confirmed complete and working (71 tests passing) before any Stage 6 code was written. Rather than trust a summary of what Stages 1–5 built, the actual model files, service files, controllers, routes, middleware, and existing tests were read in full first — in particular `Memo.js`, `WorkflowStep.js`, `memo.service.js`, `workflow.service.js`, `memo.routes.js`, `auth.js`/`role.js` middleware, and the existing frontend pages (`MyMemos.jsx`, `MemoDetail.jsx`, `Administration.jsx`, `AuthContext.jsx`, `AppRoutes.jsx`) — before deciding how Stage 6 should fit in.
 
 Two load-bearing facts from that reading shaped everything below:
 
@@ -85,7 +85,31 @@ Org + admin created → 3 participants created → a memo submitted with all 3 a
 
 ## 6. Tradeoffs and things explicitly flagged rather than silently decided
 
-- **The `ageMs` approximation** (§2, "Inbox") — exact for a memo's first approver and for any reject/resubmit-driven approver change, can overstate freshness after an `addParticipant` call on the same memo. Documented in code and here rather than treated as exact.
+- **The `ageMs` approximation** (§2, "Inbox") — exact for a memo's first approver and for any reject/resubmit-driven approver change, can overstate freshness after an `addParticipant` call on the same memo. Documented in code and here rather than treated as exact. **Resolved in §7** — a precise field was added later in this same session.
 - **`changes_requested`'s "waiting on" display** deviates from a literal reading of the spec (§4) because the literal reading doesn't match what the data actually contains (`currentApproverId` is cleared, by Stage 5 design, precisely during `changes_requested`).
 - **Dashboard response shape is flat** (`{ inboxCount, myMemosCount, ... }`), not wrapped in a named key like `{ memo }`/`{ memos }` elsewhere in this codebase — chosen to match the spec's literal enumeration of top-level return fields for both dashboard endpoints, since a dashboard summary isn't a single addressable resource the way a memo or organization is.
 - **`Model.aggregate()`'s lack of automatic ObjectId casting** (§2, "Dashboards") was caught by reasoning about it before running anything, not discovered via a failing test — worth flagging since it's the kind of bug that fails silently (an empty result, not an error).
+
+---
+
+## 7. Follow-up: a precise `currentStepSince` field, replacing the `updatedAt` approximation
+
+The user asked, later in the same session, for the §2/§6 `ageMs` approximation to be closed out properly: add a `currentStepSince` timestamp to `Memo`, set it every time `currentApproverId` changes, point the inbox age calculation at it instead of `updatedAt`, and add one test proving `addParticipant` does *not* move it (since add-participant never changes whose turn it is). This is exactly the alternative that had been considered and deliberately deferred in §2 as out of scope for a read/aggregation-only stage — now explicitly requested, so it went into Stage 5's workflow engine rather than being avoided.
+
+**Model.** `Memo.js` gained `currentStepSince: { type: Date }`, alongside `currentApproverId`/`currentStepOrder`, with a comment stating the invariant the rest of the change depends on: it is set whenever `currentApproverId` is set to a new value, and cleared whenever `currentApproverId` is cleared — never touched by anything else.
+
+**Every place that sets or clears `currentApproverId` was updated to keep that invariant true**, re-reading `workflow.service.js` and `memo.service.js` in full first rather than guessing at the call sites from memory:
+
+- `syncCurrentApproverCache` (the shared helper `approveMemo` calls) — sets `currentStepSince = new Date()` alongside the advance to the next step, and clears it (`undefined`) alongside the cache-clear on final approval, reusing the same `$unset`-via-`undefined` pattern already established and empirically verified in Stage 5.
+- `rejectMemo` and `requestChanges` — both clear `currentApproverId`/`currentStepOrder` directly (not via the shared helper); both now clear `currentStepSince` the same way.
+- `resubmitMemo` — sets `currentApproverId`/`currentStepOrder` to the newly inserted step; now also sets `currentStepSince = new Date()`.
+- `submitMemo` (`memo.service.js`) — sets `currentStepSince = memo.submittedAt` (the same Date instance, not a separate `new Date()` call, so the two fields can't drift by a few milliseconds at the moment a memo is first submitted).
+- `addParticipant` — deliberately **not** touched. It only pushes to `workflowParticipants` and saves; it never assigned `currentApproverId`/`currentStepOrder` even before this change, so the invariant holds for it automatically rather than needing a special case.
+
+**Inbox age calculation.** `listInbox`'s `ageMs` now reads `Date.now() - memo.currentStepSince` instead of `Date.now() - memo.updatedAt`. The comment explaining the old approximation's limitations was replaced with one stating the new invariant plainly; the frontend's matching comment in `Inbox.jsx` was updated too, since it specifically described the now-resolved limitation and would otherwise have been left actively wrong.
+
+**Test.** Added to `workflowAddParticipant.test.js` (its natural home, alongside the file's other add-participant behavior checks) rather than a new file: fetch a submitted 2-participant memo's `currentStepSince` via `GET /api/memos/:id`, call add-participant, and assert the value in the add-participant response is the exact same string — not merely close in time. Byte-identical equality was chosen deliberately over an elapsed-time-under-some-threshold check, since the field is never reassigned on this path and should therefore be provably unchanged, not just recently unchanged.
+
+**Result: 85/85 passing** (the 84 from the end of Stage 6 proper, plus this one new test). Full suite re-run to confirm, not just the one new/changed test file.
+
+One environmental note from this same follow-up, unrelated to the code change itself: a full-suite re-run partway through this session intermittently failed a single, untouched Stage 2 test (`role.test.js`, a 30s timeout with a `MongoNotConnectedError`) after taking 13x longer than normal. Investigated rather than dismissed — the cause was resource contention from an earlier background test run (started at the very beginning of the session, piped through `tail`, which had silently never terminated) plus an orphaned `mongod` process left behind by a manual-verification script, both still running and competing for CPU. Confirmed via `Get-Process`, stopped with the user's explicit confirmation (process termination being outside what should happen without asking), and the suite re-run clean afterward — recorded here so a future reader doesn't mistake that one flaky run for a real regression in this stage's code.
