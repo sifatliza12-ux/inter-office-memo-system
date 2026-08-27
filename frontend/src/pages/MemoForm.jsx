@@ -5,6 +5,7 @@ import { getMemo, createMemo, updateMemo, submitMemo } from '../services/memos';
 import { resubmitMemo } from '../services/workflow';
 import { getDirectory } from '../services/directory';
 import ParticipantPicker from '../components/ParticipantPicker.jsx';
+import NavBar from '../components/NavBar.jsx';
 
 const CATEGORIES = ['Administrative', 'Financial', 'Procurement', 'HR', 'Academic', 'Technical', 'General'];
 const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
@@ -125,8 +126,9 @@ function MemoForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <form onSubmit={saveDraft} className="mx-auto max-w-3xl space-y-4 rounded-lg bg-white p-6 shadow">
+    <div className="min-h-screen bg-gray-50">
+      <NavBar />
+      <form onSubmit={saveDraft} className="mx-auto max-w-3xl space-y-4 rounded-lg bg-white p-6 m-6 shadow">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold text-gray-800">{isEditing ? 'Edit Memo' : 'Create Memo'}</h1>
           <Link to="/memos" className="text-sm text-blue-600 hover:underline">

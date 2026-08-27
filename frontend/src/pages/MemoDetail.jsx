@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import ApprovalActions from '../components/ApprovalActions.jsx';
 import AddParticipantControl from '../components/AddParticipantControl.jsx';
 import WorkflowTimeline from '../components/WorkflowTimeline.jsx';
+import NavBar from '../components/NavBar.jsx';
 
 function MemoDetail() {
   const { id } = useParams();
@@ -114,8 +115,9 @@ function MemoDetail() {
   const canAddParticipant = isAnyParticipant && memo.status === 'submitted';
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="mx-auto max-w-3xl space-y-4 rounded-lg bg-white p-6 shadow">
+    <div className="min-h-screen bg-gray-50">
+      <NavBar />
+      <div className="mx-auto max-w-3xl space-y-4 rounded-lg bg-white p-6 m-6 shadow">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-gray-800">{memo.subject}</h1>

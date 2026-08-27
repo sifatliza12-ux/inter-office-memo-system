@@ -6,6 +6,8 @@ import Administration from '../pages/Administration.jsx';
 import MyMemos from '../pages/MyMemos.jsx';
 import MemoForm from '../pages/MemoForm.jsx';
 import MemoDetail from '../pages/MemoDetail.jsx';
+import Inbox from '../pages/Inbox.jsx';
+import Dashboard from '../pages/Dashboard.jsx';
 import ProtectedRoute from './ProtectedRoute.jsx';
 
 function AppRoutes() {
@@ -33,6 +35,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <MyMemos />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/inbox"
+        element={
+          <ProtectedRoute>
+            <Inbox />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
           </ProtectedRoute>
         }
       />

@@ -218,4 +218,29 @@ describe('Workflow: add participant', () => {
     expect(stepsInDb[2].userId.toString()).toBe(participants[1].user._id.toString());
     expect(stepsInDb[2].status).toBe('pending');
   });
+
+  it('does not change currentStepSince — adding a participant never changes whose turn it currently is', async () => {
+    const org = await createOrganizationWithAdmin(app);
+    const organizationId = org.response.body.organization._id;
+    const authorToken = await loginAs(app, org.payload.adminEmail, org.payload.adminPassword);
+    const { memoId, participants } = await createSubmittedWorkflow(app, organizationId, authorToken, 2);
+
+    const before = await request(app).get(`/api/memos/${memoId}`).set('Authorization', `Bearer ${authorToken}`);
+    expect(before.body.memo.currentStepSince).toEqual(expect.any(String));
+
+    const { user: extra } = await createEmployee(organizationId, { name: 'Extra Participant' });
+
+    const addResponse = await request(app)
+      .post(`/api/memos/${memoId}/workflow/add-participant`)
+      .set('Authorization', `Bearer ${participants[0].token}`)
+      .send({ userId: extra._id.toString(), reason: 'Needs an extra pair of eyes' });
+
+    expect(addResponse.status).toBe(201);
+    // currentApproverId is unchanged (add-participant inserts after the
+    // current step, never at it), so currentStepSince — which only ever
+    // moves when currentApproverId does — must be the exact same value too,
+    // not just "close in time".
+    expect(addResponse.body.memo.currentApproverId).toBe(participants[0].user._id.toString());
+    expect(addResponse.body.memo.currentStepSince).toBe(before.body.memo.currentStepSince);
+  });
 });

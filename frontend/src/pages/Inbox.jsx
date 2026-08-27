@@ -1,39 +1,39 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { listMyMemos } from '../services/memos';
+import { listInbox } from '../services/memos';
 import NavBar from '../components/NavBar.jsx';
 
-const STATUSES = ['draft', 'submitted'];
+const STATUSES = ['submitted', 'changes_requested'];
 const CATEGORIES = ['Administrative', 'Financial', 'Procurement', 'HR', 'Academic', 'Technical', 'General'];
 const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
 
-// currentApproverId is only ever populated while status === 'submitted' —
-// reject/request-changes clear it (workflow.service.js), so
-// changes_requested has no approver to point to; the ball is back in the
-// author's own court at that point, not any of the workflow participants'.
-const workflowDetail = (memo) => {
-  switch (memo.status) {
-    case 'submitted':
-      return `Waiting on: ${memo.currentApproverId?.name || 'unknown'}`;
-    case 'changes_requested':
-      return 'Waiting on: you (revise & resubmit)';
-    case 'approved':
-      return `Approved${memo.finalApproverId?.name ? ` by ${memo.finalApproverId.name}` : ''}`;
-    case 'rejected':
-      return 'Rejected';
-    default:
-      return null;
+// ageMs is time since currentStepSince (memo.service.js's listInbox) —
+// exact, not approximate. Still formatted coarsely (minutes/hours/days)
+// since sub-minute precision isn't useful in this list.
+const formatAge = (ageMs) => {
+  if (typeof ageMs !== 'number' || Number.isNaN(ageMs) || ageMs < 0) {
+    return '—';
   }
+  const minutes = Math.floor(ageMs / 60000);
+  if (minutes < 60) {
+    return `${minutes}m`;
+  }
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return `${hours}h`;
+  }
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
 };
 
-function MyMemos() {
+function Inbox() {
   const [memos, setMemos] = useState([]);
   const [filters, setFilters] = useState({ status: '', category: '', priority: '' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const fetchMemos = useCallback(async () => {
+  const fetchInbox = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -42,37 +42,32 @@ function MyMemos() {
       if (filters.category) params.category = filters.category;
       if (filters.priority) params.priority = filters.priority;
 
-      const { data } = await listMyMemos(params);
+      const { data } = await listInbox(params);
       setMemos(data.memos);
     } catch (fetchError) {
-      setError(fetchError.response?.data?.message || 'Failed to load memos');
+      setError(fetchError.response?.data?.message || 'Failed to load inbox');
     } finally {
       setLoading(false);
     }
   }, [filters]);
 
   useEffect(() => {
-    fetchMemos();
-  }, [fetchMemos]);
+    fetchInbox();
+  }, [fetchInbox]);
 
   return (
     <div className="min-h-screen bg-gray-50">
       <NavBar />
-      <div className="mx-auto max-w-4xl space-y-4 p-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-gray-800">My Memos</h1>
-          <Link to="/memos/new" className="rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700">
-            New Memo
-          </Link>
-        </div>
+      <div className="mx-auto max-w-5xl space-y-4 p-6">
+        <h1 className="text-2xl font-semibold text-gray-800">Inbox</h1>
 
         <div className="flex flex-wrap items-center gap-3 rounded-lg bg-white p-4 shadow">
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600" htmlFor="memo-status-filter">
+            <label className="text-sm text-gray-600" htmlFor="inbox-status-filter">
               Status
             </label>
             <select
-              id="memo-status-filter"
+              id="inbox-status-filter"
               value={filters.status}
               onChange={(event) => setFilters({ ...filters, status: event.target.value })}
               className="rounded border border-gray-300 px-2 py-1 text-sm"
@@ -87,11 +82,11 @@ function MyMemos() {
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600" htmlFor="memo-category-filter">
+            <label className="text-sm text-gray-600" htmlFor="inbox-category-filter">
               Category
             </label>
             <select
-              id="memo-category-filter"
+              id="inbox-category-filter"
               value={filters.category}
               onChange={(event) => setFilters({ ...filters, category: event.target.value })}
               className="rounded border border-gray-300 px-2 py-1 text-sm"
@@ -106,11 +101,11 @@ function MyMemos() {
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600" htmlFor="memo-priority-filter">
+            <label className="text-sm text-gray-600" htmlFor="inbox-priority-filter">
               Priority
             </label>
             <select
-              id="memo-priority-filter"
+              id="inbox-priority-filter"
               value={filters.priority}
               onChange={(event) => setFilters({ ...filters, priority: event.target.value })}
               className="rounded border border-gray-300 px-2 py-1 text-sm"
@@ -133,23 +128,25 @@ function MyMemos() {
               <tr className="border-b border-gray-200 text-gray-500">
                 <th className="p-3">Reference #</th>
                 <th className="p-3">Subject</th>
-                <th className="p-3">Status</th>
-                <th className="p-3">Details</th>
+                <th className="p-3">Author</th>
+                <th className="p-3">Department</th>
                 <th className="p-3">Priority</th>
-                <th className="p-3">Last Updated</th>
+                <th className="p-3">Status</th>
+                <th className="p-3">Submitted</th>
+                <th className="p-3">Age</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="p-4 text-gray-500">
+                  <td colSpan="8" className="p-4 text-gray-500">
                     Loading...
                   </td>
                 </tr>
               ) : memos.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="p-4 text-gray-500">
-                    No memos found.
+                  <td colSpan="8" className="p-4 text-gray-500">
+                    Nothing is waiting on you right now.
                   </td>
                 </tr>
               ) : (
@@ -161,10 +158,12 @@ function MyMemos() {
                       </Link>
                     </td>
                     <td className="p-3">{memo.subject}</td>
-                    <td className="p-3">{memo.status}</td>
-                    <td className="p-3 text-gray-500">{workflowDetail(memo)}</td>
+                    <td className="p-3">{memo.authorId?.name || '—'}</td>
+                    <td className="p-3">{memo.departmentId?.name || '—'}</td>
                     <td className="p-3">{memo.priority}</td>
-                    <td className="p-3">{new Date(memo.updatedAt).toLocaleString()}</td>
+                    <td className="p-3">{memo.status}</td>
+                    <td className="p-3">{memo.submittedAt ? new Date(memo.submittedAt).toLocaleDateString() : '—'}</td>
+                    <td className="p-3">{formatAge(memo.ageMs)}</td>
                   </tr>
                 ))
               )}
@@ -176,4 +175,4 @@ function MyMemos() {
   );
 }
 
-export default MyMemos;
+export default Inbox;

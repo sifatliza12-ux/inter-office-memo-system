@@ -81,7 +81,49 @@ const listMyMemos = async (organizationId, authorId, { status, category, priorit
     filter.priority = priority;
   }
 
-  return Memo.find(filter).sort({ createdAt: -1 });
+  // Populated so the author's own list can show "waiting on: X" without a
+  // second call — see Stage 6.
+  return Memo.find(filter)
+    .sort({ createdAt: -1 })
+    .populate('currentApproverId', 'name')
+    .populate('finalApproverId', 'name');
+};
+
+// Memos where it is currently this user's turn to act — the query this
+// stands on (currentApproverId matching the caller) is exactly the use the
+// Stage 5 comment on Memo.currentApproverId flagged the cache for. Filters
+// are applied as given, with no assumption baked in about which status
+// values are realistic here — that's left to the caller.
+const listInbox = async (organizationId, userId, { status, category, priority } = {}) => {
+  const filter = { organizationId, currentApproverId: userId };
+
+  if (status) {
+    filter.status = status;
+  }
+  if (category) {
+    filter.category = category;
+  }
+  if (priority) {
+    filter.priority = priority;
+  }
+
+  const memos = await Memo.find(filter)
+    .sort({ updatedAt: 1 })
+    .populate('authorId', 'name')
+    .populate('departmentId', 'name');
+
+  // "Age" is time since currentStepSince — set precisely whenever
+  // currentApproverId is set to a new value (submit, an approve that
+  // advances the step, resubmit) and left untouched by anything that
+  // doesn't change whose turn it is (e.g. add-participant). Every code path
+  // that sets currentApproverId also sets currentStepSince in the same
+  // save, so it's always present here.
+  const now = Date.now();
+  return memos.map((memo) => {
+    const memoObject = memo.toObject();
+    memoObject.ageMs = now - new Date(memo.currentStepSince).getTime();
+    return memoObject;
+  });
 };
 
 // View privacy rule, regardless of status: only the author or a listed
@@ -215,6 +257,7 @@ const submitMemo = async (organizationId, id, requestingUserId) => {
   // not just after the first workflow action.
   memo.currentApproverId = createdSteps[0].userId;
   memo.currentStepOrder = createdSteps[0].stepOrder;
+  memo.currentStepSince = memo.submittedAt;
 
   try {
     await memo.save();
@@ -231,6 +274,7 @@ const submitMemo = async (organizationId, id, requestingUserId) => {
 module.exports = {
   createMemo,
   listMyMemos,
+  listInbox,
   getMemoById,
   updateMemo,
   deleteMemo,

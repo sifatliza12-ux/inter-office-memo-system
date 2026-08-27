@@ -12,8 +12,9 @@ router.use(protect);
 
 router.post('/', memoController.createMemo);
 
-// Registered ahead of GET /:id so "mine" is never captured as an :id param.
+// Registered ahead of GET /:id so "mine"/"inbox" are never captured as :id.
 router.get('/mine', memoController.listMyMemos);
+router.get('/inbox', memoController.listInbox);
 
 router.get('/:id', memoController.getMemo);
 router.patch('/:id', memoController.updateMemo);

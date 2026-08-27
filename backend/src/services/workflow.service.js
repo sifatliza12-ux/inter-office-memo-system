@@ -52,9 +52,11 @@ const syncCurrentApproverCache = async (memo) => {
   if (nextStep) {
     memo.currentApproverId = nextStep.userId;
     memo.currentStepOrder = nextStep.stepOrder;
+    memo.currentStepSince = new Date();
   } else {
     memo.currentApproverId = undefined;
     memo.currentStepOrder = undefined;
+    memo.currentStepSince = undefined;
   }
   return nextStep;
 };
@@ -96,6 +98,7 @@ const rejectMemo = async (organizationId, id, requestingUserId, comment) => {
   memo.status = 'rejected';
   memo.currentApproverId = undefined;
   memo.currentStepOrder = undefined;
+  memo.currentStepSince = undefined;
   await memo.save();
 
   return memo;
@@ -117,6 +120,7 @@ const requestChanges = async (organizationId, id, requestingUserId, comment) => 
   memo.status = 'changes_requested';
   memo.currentApproverId = undefined;
   memo.currentStepOrder = undefined;
+  memo.currentStepSince = undefined;
   await memo.save();
 
   return memo;
@@ -200,6 +204,7 @@ const resubmitMemo = async (organizationId, id, requestingUserId) => {
   memo.status = 'submitted';
   memo.currentApproverId = newStep.userId;
   memo.currentStepOrder = newStep.stepOrder;
+  memo.currentStepSince = new Date();
   await memo.save();
 
   return memo;

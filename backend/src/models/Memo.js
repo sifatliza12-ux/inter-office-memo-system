@@ -75,6 +75,15 @@ const memoSchema = new Schema(
     currentStepOrder: {
       type: Number,
     },
+    // Set whenever currentApproverId is set to a new value (submit, an
+    // approve that advances to the next step, resubmit) and cleared
+    // whenever currentApproverId is cleared — never touched by anything
+    // that doesn't change whose turn it is (e.g. add-participant). Powers
+    // the Stage 6 inbox "age" column precisely, replacing the updatedAt
+    // approximation used before this field existed.
+    currentStepSince: {
+      type: Date,
+    },
     finalApproverId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
