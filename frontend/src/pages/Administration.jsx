@@ -41,13 +41,13 @@ function Administration() {
               onClick={() => scrollToSection(anchor)}
               className="flex items-start gap-4 text-left"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-plum-50 text-plum-700">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
                 <Icon className="h-5 w-5" />
               </span>
               <div>
                 <p className="font-medium text-stone-900">{label}</p>
                 <p className="mt-0.5 text-sm text-stone-500">{description}</p>
-                <p className="mt-2 text-sm font-medium text-plum-700">Manage &rarr;</p>
+                <p className="mt-2 text-sm font-medium text-blue-700">Manage &rarr;</p>
               </div>
             </Card>
           ))}

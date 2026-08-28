@@ -4,30 +4,36 @@ export default {
   theme: {
     extend: {
       colors: {
-        plum: {
-          50: '#f6f1f5',
-          100: '#ecdfea',
-          200: '#d6b9d1',
-          300: '#b98aae',
-          400: '#996288',
-          500: '#7a4569',
-          600: '#603352',
-          700: '#4a2740',
-          800: '#391e31',
-          900: '#2b1626',
-          950: '#1a0d17',
+        // Stage 4a: blue + tangerine brand identity, replacing Stage 1's
+        // plum/terracotta. `blue` mirrors Tailwind's own professionally
+        // tuned blue scale (explicit here, not left implicit, since it is
+        // now a deliberate brand token used everywhere from the nav to
+        // workflow-status "in progress" tones — not an incidental default).
+        blue: {
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#1e3a8a',
+          950: '#172554',
         },
-        terracotta: {
-          50: '#fdf3ee',
-          100: '#fbe3d6',
-          200: '#f6c4a7',
-          300: '#eea073',
-          400: '#e27c4a',
-          500: '#cc5c30',
-          600: '#af4823',
-          700: '#8c391d',
-          800: '#712f1b',
-          900: '#5d2818',
+        tangerine: {
+          50: '#fff7ed',
+          100: '#ffedd5',
+          200: '#fed7aa',
+          300: '#fdba74',
+          400: '#fb923c',
+          500: '#f97316',
+          600: '#ea580c',
+          700: '#c2410c',
+          800: '#9a3412',
+          900: '#7c2d12',
+          950: '#431407',
         },
       },
       fontFamily: {
@@ -35,9 +41,9 @@ export default {
         mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
       },
       boxShadow: {
-        card: '0 1px 2px 0 rgba(43, 22, 38, 0.04), 0 2px 8px -2px rgba(43, 22, 38, 0.08)',
-        'card-hover': '0 2px 4px 0 rgba(43, 22, 38, 0.06), 0 8px 20px -4px rgba(43, 22, 38, 0.14)',
-        panel: '0 1px 3px 0 rgba(43, 22, 38, 0.06)',
+        card: '0 1px 2px 0 rgba(30, 58, 138, 0.04), 0 2px 8px -2px rgba(30, 58, 138, 0.08)',
+        'card-hover': '0 2px 4px 0 rgba(30, 58, 138, 0.06), 0 8px 20px -4px rgba(30, 58, 138, 0.14)',
+        panel: '0 1px 3px 0 rgba(30, 58, 138, 0.06)',
       },
       keyframes: {
         'fade-in-up': {
@@ -48,10 +54,17 @@ export default {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
         },
+        // Very slow, subtle drift for the login page's background geometry
+        // — never fast/bouncy enough to read as "animated background".
+        drift: {
+          '0%, 100%': { transform: 'translate(0, 0)' },
+          '50%': { transform: 'translate(-2%, 2%)' },
+        },
       },
       animation: {
         'fade-in-up': 'fade-in-up 0.35s ease-out both',
         'fade-in': 'fade-in 0.2s ease-out both',
+        drift: 'drift 22s ease-in-out infinite',
       },
     },
   },

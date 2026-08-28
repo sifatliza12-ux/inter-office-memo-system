@@ -29,7 +29,7 @@ function ParticipantPicker({ users, selectedIds, onChange }) {
               <button
                 type="button"
                 onClick={() => addParticipant(user._id)}
-                className="text-xs font-medium text-plum-700 hover:underline"
+                className="text-xs font-medium text-blue-700 hover:underline"
               >
                 Add
               </button>
@@ -54,7 +54,7 @@ function ParticipantPicker({ users, selectedIds, onChange }) {
                     type="button"
                     onClick={() => moveParticipant(index, -1)}
                     disabled={index === 0}
-                    className="font-medium text-stone-500 hover:text-plum-700 hover:underline disabled:text-stone-300 disabled:no-underline"
+                    className="font-medium text-stone-500 hover:text-blue-700 hover:underline disabled:text-stone-300 disabled:no-underline"
                   >
                     Up
                   </button>
@@ -62,7 +62,7 @@ function ParticipantPicker({ users, selectedIds, onChange }) {
                     type="button"
                     onClick={() => moveParticipant(index, 1)}
                     disabled={index === selectedIds.length - 1}
-                    className="font-medium text-stone-500 hover:text-plum-700 hover:underline disabled:text-stone-300 disabled:no-underline"
+                    className="font-medium text-stone-500 hover:text-blue-700 hover:underline disabled:text-stone-300 disabled:no-underline"
                   >
                     Down
                   </button>

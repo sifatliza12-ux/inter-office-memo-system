@@ -182,7 +182,7 @@ function DepartmentsSection() {
                   </Td>
                   <Td>
                     <div className="flex gap-3">
-                      <button onClick={() => openEditForm(department)} className="text-sm font-medium text-plum-700 hover:underline">
+                      <button onClick={() => openEditForm(department)} className="text-sm font-medium text-blue-700 hover:underline">
                         Edit
                       </button>
                       <button onClick={() => toggleStatus(department)} className="text-sm font-medium text-stone-500 hover:underline">

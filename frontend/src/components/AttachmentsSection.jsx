@@ -115,9 +115,9 @@ function AttachmentsSection({ memoId, canUpload, currentUserId, isAuthor }) {
               return (
                 <div
                   key={attachment._id}
-                  className="flex items-start gap-3 rounded-lg border border-stone-200 bg-white p-3 transition-colors hover:border-plum-200"
+                  className="flex items-start gap-3 rounded-lg border border-stone-200 bg-white p-3 transition-colors hover:border-blue-200"
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-plum-50 text-plum-600">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600">
                     <PaperclipIcon className="h-[18px] w-[18px]" />
                   </span>
                   <div className="min-w-0 flex-1">
@@ -131,7 +131,7 @@ function AttachmentsSection({ memoId, canUpload, currentUserId, isAuthor }) {
                       <button
                         type="button"
                         onClick={() => handleDownload(attachment)}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-plum-700 hover:underline"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:underline"
                       >
                         <DownloadIcon className="h-3 w-3" /> Download
                       </button>
@@ -157,7 +157,7 @@ function AttachmentsSection({ memoId, canUpload, currentUserId, isAuthor }) {
       {canUpload && (
         <div className="mt-3">
           {uploadError && <p className="mb-1 text-sm text-red-600">{uploadError}</p>}
-          <label className="inline-flex cursor-pointer items-center rounded-lg bg-plum-800 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-plum-700">
+          <label className="inline-flex cursor-pointer items-center rounded-lg bg-blue-800 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700">
             {busy ? 'Uploading...' : 'Upload File'}
             <input type="file" onChange={handleFileChange} disabled={busy} className="hidden" />
           </label>

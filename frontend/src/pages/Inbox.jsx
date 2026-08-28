@@ -21,7 +21,7 @@ const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
 
 const PRIORITY_ACCENT = {
   urgent: 'text-red-600',
-  high: 'text-terracotta-600',
+  high: 'text-tangerine-600',
 };
 
 // ageMs is time since currentStepSince (memo.service.js's listInbox) —
@@ -85,7 +85,7 @@ function Inbox() {
               onClick={() => setFilters({ ...filters, status: tab.value })}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors duration-150 ${
                 filters.status === tab.value
-                  ? 'bg-plum-800 text-white shadow-sm'
+                  ? 'bg-blue-800 text-white shadow-sm'
                   : 'bg-white text-stone-600 ring-1 ring-inset ring-stone-200 hover:bg-stone-100'
               }`}
             >
@@ -162,7 +162,7 @@ function Inbox() {
               memos.map((memo) => (
                 <Tr key={memo._id}>
                   <Td>
-                    <Link to={`/memos/${memo._id}`} className="font-medium text-stone-800 hover:text-plum-700 hover:underline">
+                    <Link to={`/memos/${memo._id}`} className="font-medium text-stone-800 hover:text-blue-700 hover:underline">
                       {memo.subject}
                     </Link>
                     <p className="mt-0.5 font-mono text-xs text-stone-400">{memo.referenceNumber}</p>
@@ -181,7 +181,7 @@ function Inbox() {
                     </p>
                   </Td>
                   <Td className="text-right">
-                    <Link to={`/memos/${memo._id}`} className="text-sm font-medium text-plum-700 hover:underline">
+                    <Link to={`/memos/${memo._id}`} className="text-sm font-medium text-blue-700 hover:underline">
                       Review →
                     </Link>
                   </Td>

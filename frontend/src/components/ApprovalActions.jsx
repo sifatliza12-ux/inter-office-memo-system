@@ -71,19 +71,19 @@ function ApprovalActions({ memoId, users, onActionComplete }) {
 
   if (successLabel) {
     return (
-      <Card className="animate-fade-in-up flex items-center gap-2.5 border-emerald-200 bg-emerald-50">
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
+      <Card className="animate-fade-in-up flex items-center gap-2.5 border-blue-200 bg-blue-50">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-900 text-white">
           <CheckIcon className="h-3.5 w-3.5" />
         </span>
-        <p className="text-sm font-semibold text-emerald-800">{successLabel}</p>
+        <p className="text-sm font-semibold text-blue-900">{successLabel}</p>
       </Card>
     );
   }
 
   return (
-    <Card className="border-plum-200 bg-plum-50/60">
+    <Card className="border-blue-200 bg-blue-50/60">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-medium text-plum-900">It is your turn to act on this memo.</p>
+        <p className="text-sm font-medium text-blue-900">It is your turn to act on this memo.</p>
         <OverflowMenu label="More actions">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">Redirect to someone specific</p>
           <Select value={redirectTarget} onChange={(event) => setRedirectTarget(event.target.value)} className="!py-1.5 text-sm">
@@ -133,11 +133,18 @@ function ApprovalActions({ memoId, users, onActionComplete }) {
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
+        {/* `!` (important) overrides are required here, not just a
+            className override — Button's own `variant="primary"` already
+            sets a same-specificity `bg-*` utility, and plain utility
+            classes of equal specificity are resolved by stylesheet order,
+            not by JSX source order, so a plain override can silently lose
+            (verified: without `!`, this rendered as tangerine regardless of
+            the class listed here). */}
         <Button
           type="button"
           variant="primary"
           size="sm"
-          className="bg-emerald-600 hover:bg-emerald-700 focus-visible:ring-emerald-300"
+          className="!bg-blue-900 hover:!bg-blue-950 focus-visible:!ring-blue-300"
           disabled={busy}
           onClick={() => runAction(() => approveMemo(memoId, comment || undefined), 'Approved')}
         >
@@ -147,7 +154,6 @@ function ApprovalActions({ memoId, users, onActionComplete }) {
           type="button"
           variant="primary"
           size="sm"
-          className="bg-amber-500 hover:bg-amber-600 focus-visible:ring-amber-300"
           disabled={busy}
           onClick={() => runAction(() => requestChanges(memoId, comment), 'Changes Requested')}
         >
@@ -157,7 +163,7 @@ function ApprovalActions({ memoId, users, onActionComplete }) {
           type="button"
           variant="outline"
           size="sm"
-          className="border-red-200 text-red-700 hover:border-red-300 hover:bg-red-50 focus-visible:ring-red-200"
+          className="!border-tangerine-300 !text-tangerine-800 hover:!border-tangerine-400 hover:!bg-tangerine-50 focus-visible:!ring-tangerine-200"
           disabled={busy}
           onClick={() => runAction(() => rejectMemo(memoId, comment), 'Rejected')}
         >

@@ -4,7 +4,7 @@ function Field({ label, htmlFor, error, required, hint, children }) {
       {label && (
         <label className="mb-1 block text-sm font-medium text-stone-700" htmlFor={htmlFor}>
           {label}
-          {required && <span className="ml-0.5 text-terracotta-500">*</span>}
+          {required && <span className="ml-0.5 text-tangerine-500">*</span>}
         </label>
       )}
       {children}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { getReports } from '../services/reports';
 import { getDirectory } from '../services/directory';
+import { getStatusVisual } from '../components/statusVisuals.js';
 import AppShell from '../components/AppShell.jsx';
 import PageContainer from '../components/ui/PageContainer.jsx';
 import Card from '../components/ui/Card.jsx';
@@ -30,13 +31,16 @@ const formatHours = (hours) => {
   return `${hours.toFixed(1)}h`;
 };
 
+// accent colors reuse the shared Stage 4a status-visual tones directly
+// (never a one-off color) so these summary numbers agree with the badges/
+// timeline for the same states elsewhere in the app.
 const STAT_CARDS = [
-  { key: 'urgentMemoCount', label: 'Urgent Memos', accent: 'text-red-600' },
-  { key: 'pendingApprovalsCount', label: 'Pending Approvals', accent: 'text-amber-600' },
-  { key: 'rejectedCount', label: 'Rejected', accent: 'text-stone-800' },
-  { key: 'changeRequestCount', label: 'Change Requests', accent: 'text-stone-800' },
-  { key: 'redirectCount', label: 'Redirects', accent: 'text-plum-600' },
-  { key: 'participantRemovalCount', label: 'Participants Removed', accent: 'text-stone-800' },
+  { key: 'urgentMemoCount', label: 'Urgent Memos', accent: getStatusVisual('changes_requested').text },
+  { key: 'pendingApprovalsCount', label: 'Pending Approvals', accent: getStatusVisual('pending').text },
+  { key: 'rejectedCount', label: 'Rejected', accent: getStatusVisual('rejected').text },
+  { key: 'changeRequestCount', label: 'Change Requests', accent: getStatusVisual('changes_requested').text },
+  { key: 'redirectCount', label: 'Redirects', accent: getStatusVisual('redirected').text },
+  { key: 'participantRemovalCount', label: 'Participants Removed', accent: getStatusVisual('participant_removed').text },
 ];
 
 function Reports() {

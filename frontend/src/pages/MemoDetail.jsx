@@ -165,7 +165,7 @@ function MemoDetail() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-stone-50">
         <p className="text-sm text-red-600">{error}</p>
-        <Link to="/memos" className="text-sm font-medium text-plum-700 hover:underline">
+        <Link to="/memos" className="text-sm font-medium text-blue-700 hover:underline">
           Back to My Memos
         </Link>
       </div>
@@ -205,7 +205,7 @@ function MemoDetail() {
       <div className="mx-auto max-w-6xl animate-fade-in-up space-y-6 px-4 py-6 sm:px-6 sm:py-8">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="font-mono text-xs font-semibold uppercase tracking-wide text-terracotta-500">
+            <p className="font-mono text-xs font-semibold uppercase tracking-wide text-tangerine-500">
               {memo.referenceNumber}
             </p>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight text-stone-900">{memo.subject}</h1>
@@ -214,7 +214,7 @@ function MemoDetail() {
             <Button variant="outline" size="sm" onClick={handleExportPdf} disabled={exporting}>
               {exporting ? 'Exporting...' : 'Export PDF'}
             </Button>
-            <Link to="/memos" className="text-sm font-medium text-plum-700 hover:underline">
+            <Link to="/memos" className="text-sm font-medium text-blue-700 hover:underline">
               Back to My Memos
             </Link>
           </div>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { getAuditLogs } from '../services/auditLogs';
 import { getDirectory } from '../services/directory';
+import { getStatusVisual } from '../components/statusVisuals.js';
 import AppShell from '../components/AppShell.jsx';
 import PageContainer from '../components/ui/PageContainer.jsx';
 import Card from '../components/ui/Card.jsx';
@@ -40,26 +41,27 @@ const emptyFilters = { eventType: '', userId: '', dateFrom: '', dateTo: '' };
 
 // Purely presentational — a color cue per event category so the timeline
 // reads at a glance, without touching the backend-authored description
-// text itself (that stays exactly as Stage 9 wrote it).
-const EXACT_DOT = {
-  WORKFLOW_APPROVED: 'bg-emerald-500',
-  WORKFLOW_COMPLETED: 'bg-emerald-500',
-  WORKFLOW_REJECTED: 'bg-red-500',
-  CHANGE_REQUESTED: 'bg-amber-500',
-  WORKFLOW_REDIRECTED: 'bg-plum-500',
-  WORKFLOW_DECLINED_REDIRECTED: 'bg-terracotta-500',
+// text itself (that stays exactly as Stage 9 wrote it). Mapped events reuse
+// the shared Stage 4a status-visual table (statusVisuals.js) so an
+// approval, rejection, etc. reads the same blue/tangerine tone here as it
+// does on the memo's own workflow timeline; anything not one of the 10
+// mapped workflow states (account/comment/attachment events, plain
+// creation/assignment) stays neutral stone.
+const EVENT_VISUAL_KEY = {
+  WORKFLOW_APPROVED: 'approved',
+  WORKFLOW_COMPLETED: 'completed',
+  WORKFLOW_REJECTED: 'rejected',
+  CHANGE_REQUESTED: 'changes_requested',
+  WORKFLOW_REDIRECTED: 'redirected',
+  WORKFLOW_DECLINED_REDIRECTED: 'declined_redirected',
+  MEMO_SUBMITTED: 'submitted',
+  MEMO_RESUBMITTED: 'submitted',
+  WORKFLOW_PARTICIPANT_ADDED: 'participant_added',
+  WORKFLOW_PARTICIPANT_REMOVED: 'participant_removed',
 };
-const PREFIX_DOT = [
-  ['MEMO_', 'bg-blue-500'],
-  ['WORKFLOW_', 'bg-stone-400'],
-  ['USER_', 'bg-stone-400'],
-  ['COMMENT_', 'bg-stone-400'],
-  ['ATTACHMENT_', 'bg-stone-400'],
-];
 const dotColorFor = (eventType) => {
-  if (EXACT_DOT[eventType]) return EXACT_DOT[eventType];
-  const match = PREFIX_DOT.find(([prefix]) => eventType.startsWith(prefix));
-  return match ? match[1] : 'bg-stone-400';
+  const key = EVENT_VISUAL_KEY[eventType];
+  return key ? getStatusVisual(key).dot : 'bg-stone-400';
 };
 
 function AuditLog() {

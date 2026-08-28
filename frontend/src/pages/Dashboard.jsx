@@ -3,19 +3,12 @@ import { Link } from 'react-router-dom';
 
 import { getDashboard } from '../services/dashboard';
 import { useAuth } from '../context/AuthContext.jsx';
+import { getStatusVisual } from '../components/statusVisuals.js';
 import AppShell from '../components/AppShell.jsx';
 import PageContainer from '../components/ui/PageContainer.jsx';
 import Card from '../components/ui/Card.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
-
-const STATUS_DOT = {
-  draft: 'bg-stone-400',
-  submitted: 'bg-blue-500',
-  changes_requested: 'bg-amber-500',
-  approved: 'bg-emerald-500',
-  rejected: 'bg-red-500',
-};
 
 const STATUS_LABELS = {
   draft: 'Draft',
@@ -23,12 +16,6 @@ const STATUS_LABELS = {
   changes_requested: 'Changes Requested',
   approved: 'Approved',
   rejected: 'Rejected',
-};
-
-const ACTIVITY_DOT = {
-  approved: 'bg-emerald-500',
-  rejected: 'bg-red-500',
-  changes_requested: 'bg-amber-500',
 };
 
 const ACTION_LABELS = {
@@ -93,10 +80,10 @@ function Dashboard() {
               </Card>
 
               <Link to="/inbox" className="block">
-                <Card hoverable className="h-full border-terracotta-200">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-terracotta-600">Pending Review</p>
+                <Card hoverable className="h-full border-tangerine-200">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-tangerine-600">Pending Review</p>
                   <p className="mt-2 text-3xl font-semibold tabular-nums text-stone-900">{summary.inboxCount}</p>
-                  <p className="mt-1 text-xs font-medium text-terracotta-600">
+                  <p className="mt-1 text-xs font-medium text-tangerine-600">
                     {summary.inboxCount === 0 ? 'Nothing waiting on you' : 'Review inbox →'}
                   </p>
                 </Card>
@@ -123,14 +110,14 @@ function Dashboard() {
                     {summary.recentActivity.map((activity, index) => (
                       <li key={`${activity.memoId}-${index}`} className="flex items-start gap-3 px-5 py-3 sm:px-6">
                         <span
-                          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${ACTIVITY_DOT[activity.action] || 'bg-stone-300'}`}
+                          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${getStatusVisual(activity.action).dot}`}
                           aria-hidden="true"
                         />
                         <div className="min-w-0 text-sm">
                           <p className="text-stone-700">
                             <span className="font-medium text-stone-900">{activity.actorName}</span>{' '}
                             {ACTION_LABELS[activity.action] || activity.action}{' '}
-                            <Link to={`/memos/${activity.memoId}`} className="font-medium text-plum-700 hover:underline">
+                            <Link to={`/memos/${activity.memoId}`} className="font-medium text-blue-700 hover:underline">
                               {activity.subject}
                             </Link>
                           </p>
@@ -153,7 +140,7 @@ function Dashboard() {
                   {Object.entries(summary.myMemosByStatus).map(([status, count]) => (
                     <li key={status} className="flex items-center justify-between px-5 py-3 text-sm sm:px-6">
                       <span className="flex items-center gap-2 text-stone-600">
-                        <span className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[status] || 'bg-stone-300'}`} aria-hidden="true" />
+                        <span className={`h-2 w-2 shrink-0 rounded-full ${getStatusVisual(status).dot}`} aria-hidden="true" />
                         {STATUS_LABELS[status] || status}
                       </span>
                       <span className="font-semibold tabular-nums text-stone-800">{count}</span>

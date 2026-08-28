@@ -16,7 +16,7 @@ function MetadataCell({ label, value, className = '' }) {
 function MemoMetadataBar({ memo, fromLabel, toLabel }) {
   return (
     <div className="grid grid-cols-2 divide-x divide-y divide-stone-200 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-panel sm:grid-cols-4 sm:divide-y-0">
-      <MetadataCell label="ID" value={<span className="font-mono text-terracotta-600">{memo.referenceNumber}</span>} />
+      <MetadataCell label="ID" value={<span className="font-mono text-tangerine-600">{memo.referenceNumber}</span>} />
       <MetadataCell label="From" value={fromLabel || '—'} />
       <MetadataCell label="To" value={toLabel || '—'} />
       <div className="px-4 py-3 sm:px-5">

@@ -217,3 +217,69 @@ export function MoreIcon(props) {
     </svg>
   );
 }
+
+// Stage 4a status/action icon set — paired with color+text per Section 2's
+// mapping so no state is ever communicated by hue alone.
+export function PaperPlaneIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M21 3 3 10.5l7 2.5 2.5 7L21 3Z" />
+      <path d="M12.5 13.5 21 3" />
+    </svg>
+  );
+}
+
+export function ClockIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3.3 2" />
+    </svg>
+  );
+}
+
+export function ArrowForwardIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 12h15" />
+      <path d="M13 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+export function DoubleCheckIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="m2.5 12.5 4 4 8.5-8.5" />
+      <path d="m9 12.5 4 4 8.5-8.5" />
+    </svg>
+  );
+}
+
+export function XIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  );
+}
+
+// Declined & Redirected — a small X (the decline) followed by a forward
+// arrow (the redirect), combined into one compact glyph.
+export function DeclineRedirectIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="m3.5 5 4.5 4.5M8 5l-4.5 4.5" />
+      <path d="M11.5 12h8" />
+      <path d="M15.5 8.5 20 12l-4.5 3.5" />
+    </svg>
+  );
+}
+
+export function MinusIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M5 12h14" />
+    </svg>
+  );
+}

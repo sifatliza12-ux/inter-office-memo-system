@@ -47,7 +47,7 @@ function Register() {
     <div className="flex min-h-screen items-center justify-center bg-stone-50 px-4 py-10">
       <div className="w-full max-w-sm animate-fade-in-up">
         <div className="mb-6 text-center">
-          <p className="font-mono text-xs font-semibold uppercase tracking-widest text-terracotta-500">
+          <p className="font-mono text-xs font-semibold uppercase tracking-widest text-tangerine-500">
             Inter-Office Memo
           </p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-stone-900">Register Organization</h1>
@@ -102,7 +102,7 @@ function Register() {
 
             <p className="text-center text-sm text-stone-500">
               Already have an account?{' '}
-              <Link to="/login" className="font-medium text-plum-700 hover:underline">
+              <Link to="/login" className="font-medium text-blue-700 hover:underline">
                 Sign in
               </Link>
             </p>

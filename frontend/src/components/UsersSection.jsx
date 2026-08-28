@@ -304,7 +304,7 @@ function UsersSection() {
                   </Td>
                   <Td>
                     <div className="flex gap-3">
-                      <button onClick={() => openEditForm(user)} className="text-sm font-medium text-plum-700 hover:underline">
+                      <button onClick={() => openEditForm(user)} className="text-sm font-medium text-blue-700 hover:underline">
                         Edit
                       </button>
                       <button

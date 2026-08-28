@@ -1,17 +1,26 @@
 import { ActionBadge } from './ui/Badge.jsx';
+import { getStatusVisual } from './statusVisuals.js';
 import LoadingSpinner from './ui/LoadingSpinner.jsx';
 import EmptyState from './ui/EmptyState.jsx';
 
-const CONNECTOR_RING = {
-  MEMO_SUBMITTED: 'bg-blue-500 ring-blue-100',
-  RESUBMITTED: 'bg-blue-500 ring-blue-100',
-  APPROVED: 'bg-emerald-500 ring-emerald-100',
-  DECLINED: 'bg-red-500 ring-red-100',
-  CHANGES_REQUESTED: 'bg-amber-500 ring-amber-100',
-  REDIRECTED: 'bg-plum-500 ring-plum-100',
-  DECLINED_REDIRECTED: 'bg-terracotta-500 ring-terracotta-100',
-  PARTICIPANT_ADDED: 'bg-stone-400 ring-stone-100',
-  PARTICIPANT_REMOVED: 'bg-stone-400 ring-stone-100',
+// WorkflowAction.action -> the shared status-visual key, same mapping
+// ActionBadge uses — the connector dot and its adjacent ActionBadge must
+// always agree.
+const ACTION_VISUAL_KEY = {
+  MEMO_SUBMITTED: 'submitted',
+  RESUBMITTED: 'submitted',
+  APPROVED: 'approved',
+  DECLINED: 'rejected',
+  CHANGES_REQUESTED: 'changes_requested',
+  REDIRECTED: 'redirected',
+  DECLINED_REDIRECTED: 'declined_redirected',
+  PARTICIPANT_ADDED: 'participant_added',
+  PARTICIPANT_REMOVED: 'participant_removed',
+};
+
+const connectorFor = (action) => {
+  const visual = getStatusVisual(ACTION_VISUAL_KEY[action]);
+  return `${visual.dot} ${visual.ring}`;
 };
 
 // Administrative events, not workflow decisions — deliberately smaller
@@ -42,7 +51,7 @@ function VersionMarker({ versionNumber, version, isLast }) {
 // the flatter name+badge row this replaced.
 function ActionEntry({ action, isLast }) {
   const minor = MINOR_ACTIONS.has(action.action);
-  const connector = CONNECTOR_RING[action.action] || 'bg-stone-400 ring-stone-100';
+  const connector = connectorFor(action.action);
 
   return (
     <li className="relative flex gap-3">
@@ -75,18 +84,20 @@ function ActionEntry({ action, isLast }) {
 // this is the one place this timeline shows something that hasn't happened
 // yet, distinguished with an outlined (not filled) dot and a pulse.
 function CurrentStepEntry({ step, isLast }) {
+  const visual = getStatusVisual('current');
+  const ClockIcon = visual.Icon;
   return (
     <li className="relative flex gap-3">
       <div className="flex flex-col items-center">
         <span className="relative z-10 mt-1 flex h-2.5 w-2.5 shrink-0" aria-hidden="true">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-60" />
-          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-blue-500 ring-4 ring-blue-100" />
+          <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${visual.dot} ring-4 ${visual.ring}`} />
         </span>
         {!isLast && <span className="mt-1 w-px flex-1 bg-stone-200" aria-hidden="true" />}
       </div>
       <div className="flex-1 pb-1">
-        <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-700">
-          <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" aria-hidden="true" />
+        <span className={`inline-flex items-center gap-1.5 text-sm font-semibold ${visual.text}`}>
+          <ClockIcon className="h-3.5 w-3.5 shrink-0" />
           Awaiting action
         </span>
         <p className="mt-1 text-sm text-stone-700">{step.userId?.name || 'Unknown'}</p>

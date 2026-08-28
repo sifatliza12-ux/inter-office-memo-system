@@ -204,7 +204,7 @@ function MemoForm() {
           <h1 className="text-xl font-semibold tracking-tight text-stone-900">
             {isEditing ? (isResubmit ? 'Revise Memo' : 'Edit Memo') : 'New Memo'}
           </h1>
-          <Link to="/memos" className="text-sm font-medium text-plum-700 hover:underline">
+          <Link to="/memos" className="text-sm font-medium text-blue-700 hover:underline">
             Back to My Memos
           </Link>
         </div>
@@ -228,7 +228,7 @@ function MemoForm() {
               than a generic settings form. */}
           <Card className="space-y-5">
             <div className="border-b border-stone-200 pb-4 text-center">
-              <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-terracotta-500">Memorandum</p>
+              <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-tangerine-500">Memorandum</p>
             </div>
 
             <div className="grid grid-cols-1 gap-3 border-b border-stone-100 pb-5 sm:grid-cols-[auto_1fr] sm:items-center sm:gap-x-4 sm:gap-y-2">
@@ -267,7 +267,7 @@ function MemoForm() {
             <div>
               <label className="mb-1 block text-sm font-medium text-stone-700" htmlFor="memo-body">
                 Body
-                <span className="ml-0.5 text-terracotta-500">*</span>
+                <span className="ml-0.5 text-tangerine-500">*</span>
               </label>
               <Textarea
                 id="memo-body"
@@ -331,7 +331,7 @@ function MemoForm() {
                 type="file"
                 multiple
                 onChange={handleStageFiles}
-                className="mt-3 block w-full text-sm text-stone-600 file:mr-3 file:rounded-md file:border-0 file:bg-plum-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-plum-700 hover:file:bg-plum-100"
+                className="mt-3 block w-full text-sm text-stone-600 file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100"
               />
               {stagedFiles.length > 0 && (
                 <ul className="mt-3 space-y-1.5">

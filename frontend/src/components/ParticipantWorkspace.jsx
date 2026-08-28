@@ -2,16 +2,20 @@ import { useState } from 'react';
 
 import { addWorkflowParticipant, removeWorkflowParticipant, setMyRoleLabel } from '../services/workflow';
 import { useToast } from '../context/ToastContext.jsx';
+import { getStatusVisual } from './statusVisuals.js';
 import Card from './ui/Card.jsx';
 import Button from './ui/Button.jsx';
 import Select from './ui/Select.jsx';
 import Input from './ui/Input.jsx';
 import { PlusIcon, PencilIcon } from './icons.jsx';
 
-// Real WorkflowStep-derived status labels — never a fabricated role like
-// "Reviewer"/"Owner"/"Participant". "Current" overrides "Pending" for
-// whichever step is the lowest-stepOrder pending one; "Author" is only used
-// for the memo's author when they hold no WorkflowStep of their own.
+// Real WorkflowStep-derived status — never a fabricated role like
+// "Reviewer"/"Owner"/"Participant". "current" overrides "pending" for
+// whichever step is the lowest-stepOrder pending one; "author" is only used
+// for the memo's author when they hold no WorkflowStep of their own. Colors
+// and icons come from the shared Stage 4a mapping (statusVisuals.js), never
+// declared locally, so this always matches the badge/timeline/audit-log
+// treatment of the same states.
 const REAL_STATUS_LABEL = {
   author: 'Author',
   current: 'Current',
@@ -20,26 +24,6 @@ const REAL_STATUS_LABEL = {
   rejected: 'Rejected',
   changes_requested: 'Changes Requested',
   removed: 'Removed',
-};
-
-const DOT_CLASS = {
-  author: 'bg-stone-400',
-  current: 'bg-blue-500',
-  pending: 'bg-stone-300',
-  approved: 'bg-emerald-500',
-  rejected: 'bg-red-500',
-  changes_requested: 'bg-amber-500',
-  removed: 'bg-stone-300',
-};
-
-const TEXT_CLASS = {
-  author: 'text-stone-500',
-  current: 'text-blue-700',
-  pending: 'text-stone-400',
-  approved: 'text-emerald-700',
-  rejected: 'text-red-700',
-  changes_requested: 'text-amber-700',
-  removed: 'text-stone-400',
 };
 
 const initials = (name) =>
@@ -54,12 +38,14 @@ const initials = (name) =>
 function ParticipantRow({ row, onEditRole, onStartRemove, onCancelRemove, onConfirmRemove, removeState, roleState, onRoleChange, onRoleSubmit, onRoleCancel }) {
   const isRemoving = removeState.userId === row.userId;
   const isEditingRole = roleState.editing && row.editable;
+  const visual = getStatusVisual(row.statusKey);
+  const StatusIcon = visual.Icon;
 
   return (
     <li className="px-5 py-3.5 sm:px-6">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-plum-100 text-xs font-semibold text-plum-700">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
             {initials(row.name)}
           </span>
           <div className="min-w-0">
@@ -70,15 +56,19 @@ function ParticipantRow({ row, onEditRole, onStartRemove, onCancelRemove, onConf
 
         <div className="flex shrink-0 flex-col items-end gap-1 text-right">
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide">
-            <span className={`h-1.5 w-1.5 rounded-full ${DOT_CLASS[row.statusKey] || 'bg-stone-300'}`} aria-hidden="true" />
-            <span className={TEXT_CLASS[row.statusKey] || 'text-stone-500'}>{row.statusLabel}</span>
+            {StatusIcon ? (
+              <StatusIcon className={`h-3 w-3 shrink-0 ${visual.text}`} />
+            ) : (
+              <span className={`h-1.5 w-1.5 rounded-full ${visual.dot}`} aria-hidden="true" />
+            )}
+            <span className={visual.text}>{row.statusLabel}</span>
           </span>
 
           {row.editable && !isEditingRole && (
             <button
               type="button"
               onClick={() => onEditRole(row)}
-              className="inline-flex items-center gap-1 text-xs text-stone-400 transition-colors hover:text-plum-700"
+              className="inline-flex items-center gap-1 text-xs text-stone-400 transition-colors hover:text-blue-700"
             >
               <PencilIcon className="h-3 w-3" />
               {row.roleLabel || 'Add role label'}
@@ -333,7 +323,7 @@ function ParticipantWorkspace({ memo, workflowSteps, directory, currentUserId, c
           <button
             type="button"
             onClick={() => (addOpen ? closeAdd() : openAdd())}
-            className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-plum-700 transition-colors hover:text-plum-900"
+            className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-blue-700 transition-colors hover:text-blue-900"
           >
             <PlusIcon className="h-3.5 w-3.5" /> Add
           </button>

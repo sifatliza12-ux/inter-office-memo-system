@@ -19,7 +19,7 @@ function Home() {
     <AppShell>
       <div className="mx-auto max-w-4xl space-y-8 px-4 py-10 sm:px-6">
         <div className="animate-fade-in-up text-center">
-          <p className="font-mono text-xs font-semibold uppercase tracking-widest text-terracotta-500">
+          <p className="font-mono text-xs font-semibold uppercase tracking-widest text-tangerine-500">
             Inter-Office Memo Management System
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-stone-900">
@@ -35,7 +35,7 @@ function Home() {
           {QUICK_LINKS.map(({ to, label, description, icon: Icon }) => (
             <Link key={to} to={to} className="animate-fade-in-up">
               <Card hoverable className="flex items-start gap-4">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-plum-50 text-plum-700">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
                   <Icon className="h-5 w-5" />
                 </span>
                 <div>

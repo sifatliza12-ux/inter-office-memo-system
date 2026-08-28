@@ -47,7 +47,7 @@ const GROUPS = [
 const linkClasses = (isActive, collapsed) =>
   `group relative flex items-center gap-3 rounded-lg py-2 text-sm font-medium transition-colors duration-150 ${
     collapsed ? 'justify-center px-2' : 'px-3'
-  } ${isActive ? 'bg-plum-700/80 text-white' : 'text-plum-100/70 hover:bg-plum-800/60 hover:text-white'}`;
+  } ${isActive ? 'bg-blue-700/80 text-white' : 'text-blue-100/70 hover:bg-blue-800/60 hover:text-white'}`;
 
 // My Memos and Drafts both target the /memos path (Drafts via a query
 // param), so plain NavLink prefix-matching can't tell them apart — this
@@ -96,7 +96,7 @@ function SidebarLinks({ onNavigate, collapsed = false }) {
       {GROUPS.map((group) => (
         <div key={group.heading} className="space-y-1">
           {!collapsed && (
-            <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-plum-300/60">{group.heading}</p>
+            <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-blue-300/60">{group.heading}</p>
           )}
           {group.links.map((link) => (
             <NavLinkItem key={link.to} {...link} collapsed={collapsed} onNavigate={onNavigate} />
@@ -107,7 +107,7 @@ function SidebarLinks({ onNavigate, collapsed = false }) {
       {user?.role === 'admin' && (
         <div className="space-y-1">
           {!collapsed && (
-            <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-plum-300/60">Management</p>
+            <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-blue-300/60">Management</p>
           )}
           {MANAGEMENT_LINKS.map((link) => (
             <NavLinkItem key={link.to} {...link} collapsed={collapsed} onNavigate={onNavigate} />
@@ -140,7 +140,7 @@ function NavBar({ collapsed = false, onToggleCollapse }) {
           >
             <MenuIcon className="h-5 w-5" />
           </button>
-          <Link to="/" className="hidden font-mono text-sm font-semibold tracking-tight text-plum-800 sm:inline">
+          <Link to="/" className="hidden font-mono text-sm font-semibold tracking-tight text-blue-800 sm:inline">
             Inter-Office Memo
           </Link>
         </div>
@@ -148,7 +148,7 @@ function NavBar({ collapsed = false, onToggleCollapse }) {
         <div className="flex items-center gap-2 sm:gap-3">
           <NavLink
             to="/search"
-            className="hidden rounded-md p-2 text-stone-500 transition-colors hover:bg-stone-100 hover:text-plum-700 sm:inline-flex"
+            className="hidden rounded-md p-2 text-stone-500 transition-colors hover:bg-stone-100 hover:text-blue-700 sm:inline-flex"
             aria-label="Search memos"
           >
             <SearchIcon className="h-[18px] w-[18px]" />
@@ -156,7 +156,7 @@ function NavBar({ collapsed = false, onToggleCollapse }) {
           <NotificationBell />
           <div className="mx-1 hidden h-6 w-px bg-stone-200 sm:block" />
           <div className="hidden items-center gap-2 sm:flex">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-plum-100 text-xs font-semibold text-plum-700">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
               {initial}
             </span>
             <span className="text-sm font-medium text-stone-700">{user.name}</span>
@@ -172,7 +172,7 @@ function NavBar({ collapsed = false, onToggleCollapse }) {
       </header>
 
       <aside
-        className={`fixed inset-y-0 left-0 z-20 hidden flex-col bg-plum-900 pt-16 transition-[width] duration-200 ease-out lg:flex ${
+        className={`fixed inset-y-0 left-0 z-20 hidden flex-col bg-blue-900 pt-16 transition-[width] duration-200 ease-out lg:flex ${
           collapsed ? 'w-[68px]' : 'w-60'
         }`}
       >
@@ -180,7 +180,7 @@ function NavBar({ collapsed = false, onToggleCollapse }) {
         <button
           type="button"
           onClick={onToggleCollapse}
-          className={`flex items-center gap-2.5 border-t border-plum-800/80 px-3 py-3 text-xs font-medium text-plum-300/70 transition-colors hover:bg-plum-800/60 hover:text-white ${
+          className={`flex items-center gap-2.5 border-t border-blue-800/80 px-3 py-3 text-xs font-medium text-blue-300/70 transition-colors hover:bg-blue-800/60 hover:text-white ${
             collapsed ? 'justify-center' : ''
           }`}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -193,14 +193,14 @@ function NavBar({ collapsed = false, onToggleCollapse }) {
 
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-plum-950/50 animate-fade-in" onClick={() => setMobileOpen(false)} aria-hidden="true" />
-          <div className="absolute inset-y-0 left-0 flex w-64 flex-col bg-plum-900 shadow-xl animate-fade-in-up">
-            <div className="flex h-16 items-center justify-between border-b border-plum-800 px-4">
+          <div className="absolute inset-0 bg-blue-950/50 animate-fade-in" onClick={() => setMobileOpen(false)} aria-hidden="true" />
+          <div className="absolute inset-y-0 left-0 flex w-64 flex-col bg-blue-900 shadow-xl animate-fade-in-up">
+            <div className="flex h-16 items-center justify-between border-b border-blue-800 px-4">
               <span className="font-mono text-sm font-semibold text-white">Inter-Office Memo</span>
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
-                className="rounded-md p-1.5 text-plum-200 hover:bg-plum-800"
+                className="rounded-md p-1.5 text-blue-200 hover:bg-blue-800"
                 aria-label="Close navigation menu"
               >
                 <CloseIcon className="h-5 w-5" />

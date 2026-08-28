@@ -1,10 +1,10 @@
 const VARIANT_CLASSES = {
   primary:
-    'bg-terracotta-500 text-white shadow-sm hover:bg-terracotta-600 focus-visible:ring-terracotta-300 disabled:hover:bg-terracotta-500',
+    'bg-tangerine-500 text-white shadow-sm hover:bg-tangerine-600 focus-visible:ring-tangerine-300 disabled:hover:bg-tangerine-500',
   secondary:
-    'bg-plum-800 text-white shadow-sm hover:bg-plum-700 focus-visible:ring-plum-300 disabled:hover:bg-plum-800',
+    'bg-blue-800 text-white shadow-sm hover:bg-blue-700 focus-visible:ring-blue-300 disabled:hover:bg-blue-800',
   outline:
-    'border border-stone-300 bg-white text-stone-700 hover:border-plum-300 hover:bg-plum-50 hover:text-plum-800 focus-visible:ring-plum-200',
+    'border border-stone-300 bg-white text-stone-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-800 focus-visible:ring-blue-200',
   ghost: 'text-stone-600 hover:bg-stone-100 hover:text-stone-900 focus-visible:ring-stone-200',
   danger:
     'bg-red-600 text-white shadow-sm hover:bg-red-700 focus-visible:ring-red-300 disabled:hover:bg-red-600',
