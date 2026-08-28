@@ -3,6 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../context/AuthContext.jsx';
 import { createOrganization } from '../services/organizations';
+import Button from '../components/ui/Button.jsx';
+import Card from '../components/ui/Card.jsx';
+import Field from '../components/ui/Field.jsx';
+import Input from '../components/ui/Input.jsx';
 
 const emptyForm = { name: '', identifier: '', adminName: '', adminEmail: '', adminPassword: '' };
 
@@ -40,100 +44,71 @@ function Register() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-sm space-y-4 rounded-lg bg-white p-8 shadow"
-      >
-        <h1 className="text-xl font-semibold text-gray-800">Register Organization</h1>
-
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700" htmlFor="org-name">
-            Organization Name
-          </label>
-          <input
-            id="org-name"
-            required
-            value={form.name}
-            onChange={handleChange('name')}
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          />
+    <div className="flex min-h-screen items-center justify-center bg-stone-50 px-4 py-10">
+      <div className="w-full max-w-sm animate-fade-in-up">
+        <div className="mb-6 text-center">
+          <p className="font-mono text-xs font-semibold uppercase tracking-widest text-terracotta-500">
+            Inter-Office Memo
+          </p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-stone-900">Register Organization</h1>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700" htmlFor="org-identifier">
-            Organization Identifier
-          </label>
-          <input
-            id="org-identifier"
-            required
-            value={form.identifier}
-            onChange={handleChange('identifier')}
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          />
-        </div>
+        <Card>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+                {error}
+              </p>
+            )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700" htmlFor="admin-name">
-            Admin Name
-          </label>
-          <input
-            id="admin-name"
-            required
-            value={form.adminName}
-            onChange={handleChange('adminName')}
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          />
-        </div>
+            <Field label="Organization Name" htmlFor="org-name">
+              <Input id="org-name" required value={form.name} onChange={handleChange('name')} />
+            </Field>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700" htmlFor="admin-email">
-            Admin Email
-          </label>
-          <input
-            id="admin-email"
-            type="email"
-            required
-            autoComplete="email"
-            value={form.adminEmail}
-            onChange={handleChange('adminEmail')}
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          />
-        </div>
+            <Field label="Organization Identifier" htmlFor="org-identifier">
+              <Input id="org-identifier" required value={form.identifier} onChange={handleChange('identifier')} />
+            </Field>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700" htmlFor="admin-password">
-            Admin Password
-          </label>
-          <input
-            id="admin-password"
-            type="password"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            value={form.adminPassword}
-            onChange={handleChange('adminPassword')}
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          />
-        </div>
+            <Field label="Admin Name" htmlFor="admin-name">
+              <Input id="admin-name" required value={form.adminName} onChange={handleChange('adminName')} />
+            </Field>
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full rounded bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {submitting ? 'Registering...' : 'Register'}
-        </button>
+            <Field label="Admin Email" htmlFor="admin-email">
+              <Input
+                id="admin-email"
+                type="email"
+                required
+                autoComplete="email"
+                value={form.adminEmail}
+                onChange={handleChange('adminEmail')}
+              />
+            </Field>
 
-        <p className="text-center text-sm text-gray-600">
-          Already have an account?{' '}
-          <Link to="/login" className="text-blue-600 hover:underline">
-            Sign in
-          </Link>
-        </p>
-      </form>
+            <Field label="Admin Password" htmlFor="admin-password">
+              <Input
+                id="admin-password"
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                value={form.adminPassword}
+                onChange={handleChange('adminPassword')}
+              />
+            </Field>
+
+            <Button type="submit" disabled={submitting} className="w-full">
+              {submitting ? 'Registering...' : 'Register'}
+            </Button>
+
+            <p className="text-center text-sm text-stone-500">
+              Already have an account?{' '}
+              <Link to="/login" className="font-medium text-plum-700 hover:underline">
+                Sign in
+              </Link>
+            </p>
+          </form>
+        </Card>
+      </div>
     </div>
   );
 }

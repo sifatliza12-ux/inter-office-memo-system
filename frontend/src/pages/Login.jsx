@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../context/AuthContext.jsx';
+import Button from '../components/ui/Button.jsx';
+import Card from '../components/ui/Card.jsx';
+import Field from '../components/ui/Field.jsx';
+import Input from '../components/ui/Input.jsx';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -27,60 +31,58 @@ function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-sm space-y-4 rounded-lg bg-white p-8 shadow"
-      >
-        <h1 className="text-xl font-semibold text-gray-800">Sign in</h1>
-
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700" htmlFor="email">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          />
+    <div className="flex min-h-screen items-center justify-center bg-stone-50 px-4">
+      <div className="w-full max-w-sm animate-fade-in-up">
+        <div className="mb-6 text-center">
+          <p className="font-mono text-xs font-semibold uppercase tracking-widest text-terracotta-500">
+            Inter-Office Memo
+          </p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-stone-900">Sign in</h1>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700" htmlFor="password">
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            required
-            autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          />
-        </div>
+        <Card>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+                {error}
+              </p>
+            )}
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full rounded bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {submitting ? 'Signing in...' : 'Sign in'}
-        </button>
+            <Field label="Email" htmlFor="email">
+              <Input
+                id="email"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </Field>
 
-        <p className="text-center text-sm text-gray-600">
-          Don&apos;t have an organization yet?{' '}
-          <Link to="/register" className="text-blue-600 hover:underline">
-            Register one
-          </Link>
-        </p>
-      </form>
+            <Field label="Password" htmlFor="password">
+              <Input
+                id="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </Field>
+
+            <Button type="submit" disabled={submitting} className="w-full">
+              {submitting ? 'Signing in...' : 'Sign in'}
+            </Button>
+
+            <p className="text-center text-sm text-stone-500">
+              Don&apos;t have an organization yet?{' '}
+              <Link to="/register" className="font-medium text-plum-700 hover:underline">
+                Register one
+              </Link>
+            </p>
+          </form>
+        </Card>
+      </div>
     </div>
   );
 }

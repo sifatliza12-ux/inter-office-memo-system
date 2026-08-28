@@ -1,14 +1,15 @@
 import { Navigate } from 'react-router-dom';
 
 import { useAuth } from '../context/AuthContext.jsx';
+import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 
 function ProtectedRoute({ children, roles }) {
   const { user, loading } = useAuth();
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <p className="text-sm text-gray-500">Loading...</p>
+      <div className="flex min-h-screen items-center justify-center bg-stone-50">
+        <LoadingSpinner label="Loading..." />
       </div>
     );
   }

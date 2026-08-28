@@ -11,6 +11,10 @@ import WorkflowTimeline from '../components/WorkflowTimeline.jsx';
 import CommentsSection from '../components/CommentsSection.jsx';
 import AttachmentsSection from '../components/AttachmentsSection.jsx';
 import NavBar from '../components/NavBar.jsx';
+import Card from '../components/ui/Card.jsx';
+import Button from '../components/ui/Button.jsx';
+import { StatusBadge } from '../components/ui/Badge.jsx';
+import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 
 function MemoDetail() {
   const { id } = useParams();
@@ -104,17 +108,17 @@ function MemoDetail() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <p className="text-sm text-gray-500">Loading...</p>
+      <div className="flex min-h-screen items-center justify-center bg-stone-50">
+        <LoadingSpinner label="Loading..." />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-gray-50">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-stone-50">
         <p className="text-sm text-red-600">{error}</p>
-        <Link to="/memos" className="text-sm text-blue-600 hover:underline">
+        <Link to="/memos" className="text-sm font-medium text-plum-700 hover:underline">
           Back to My Memos
         </Link>
       </div>
@@ -135,149 +139,137 @@ function MemoDetail() {
   // memos too, and for an author who never became a participant themselves.
   const canComment = isAuthor || isAnyParticipant;
 
+  const metaItems = [
+    { label: 'Priority', value: <span className="capitalize">{memo.priority}</span> },
+    { label: 'Category', value: memo.category },
+    { label: 'Department', value: departmentName(memo.departmentId) || 'None' },
+    { label: 'Author', value: userName(memo.authorId) },
+    { label: 'Created', value: new Date(memo.createdAt).toLocaleString() },
+    { label: 'Updated', value: new Date(memo.updatedAt).toLocaleString() },
+  ];
+  if (memo.submittedAt) {
+    metaItems.push({ label: 'Submitted', value: new Date(memo.submittedAt).toLocaleString() });
+  }
+  if (memo.finalApprovedAt) {
+    metaItems.push({
+      label: 'Final approval',
+      value: `${new Date(memo.finalApprovedAt).toLocaleString()} by ${userName(memo.finalApproverId)}`,
+    });
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-stone-50 pt-16 lg:pl-60">
       <NavBar />
-      <div className="mx-auto max-w-3xl space-y-4 rounded-lg bg-white p-6 m-6 shadow">
-        <div className="flex items-center justify-between">
+      <div className="mx-auto max-w-6xl animate-fade-in-up space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold text-gray-800">{memo.subject}</h1>
-            <p className="text-sm text-gray-500">{memo.referenceNumber}</p>
+            <p className="font-mono text-xs font-semibold uppercase tracking-wide text-terracotta-500">
+              {memo.referenceNumber}
+            </p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-stone-900">{memo.subject}</h1>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={handleExportPdf}
-              disabled={exporting}
-              className="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-            >
+            <Button variant="outline" size="sm" onClick={handleExportPdf} disabled={exporting}>
               {exporting ? 'Exporting...' : 'Export PDF'}
-            </button>
-            <Link to="/memos" className="text-sm text-blue-600 hover:underline">
+            </Button>
+            <Link to="/memos" className="text-sm font-medium text-plum-700 hover:underline">
               Back to My Memos
             </Link>
           </div>
         </div>
 
-        {actionError && <p className="text-sm text-red-600">{actionError}</p>}
+        {actionError && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{actionError}</p>}
 
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <span className="text-gray-500">Status:</span> {memo.status}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* Left: memo content */}
+          <div className="space-y-6 lg:col-span-2">
+            <Card>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
+                {metaItems.map((item) => (
+                  <div key={item.label}>
+                    <dt className="text-xs uppercase tracking-wide text-stone-400">{item.label}</dt>
+                    <dd className="mt-0.5 text-stone-800">{item.value}</dd>
+                  </div>
+                ))}
+              </dl>
+
+              <div className="mt-5 border-t border-stone-100 pt-5">
+                <p className="text-sm font-medium text-stone-700">Body</p>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-stone-800">{memo.body}</p>
+              </div>
+            </Card>
+
+            <Card padded={false}>
+              <div className="border-b border-stone-100 px-5 py-4 sm:px-6">
+                <AttachmentsSection memoId={id} canUpload={canComment} currentUserId={currentUserId} isAuthor={isAuthor} />
+              </div>
+              <div className="px-5 py-4 sm:px-6">
+                <CommentsSection memoId={id} canComment={canComment} />
+              </div>
+            </Card>
           </div>
-          <div>
-            <span className="text-gray-500">Priority:</span> {memo.priority}
+
+          {/* Right: status, workflow, actions */}
+          <div className="space-y-6">
+            <Card>
+              <p className="text-xs font-medium uppercase tracking-wide text-stone-400">Current status</p>
+              <div className="mt-1.5">
+                <StatusBadge status={memo.status} className="text-base" />
+              </div>
+            </Card>
+
+            <Card>
+              <p className="text-sm font-medium text-stone-700">Workflow Timeline</p>
+              <div className="mt-3">
+                <WorkflowTimeline steps={workflowSteps} />
+              </div>
+            </Card>
+
+            {isCurrentApprover && <ApprovalActions memoId={id} onActionComplete={fetchAll} />}
+
+            {canAddParticipant && (
+              <AddParticipantControl
+                memoId={id}
+                users={directory.users}
+                existingParticipantIds={memo.workflowParticipants}
+                onActionComplete={fetchAll}
+              />
+            )}
+
+            {isDraft && isAuthor && (
+              <Card className="flex flex-wrap gap-2">
+                <Link to={`/memos/${id}/edit`}>
+                  <Button variant="secondary" size="sm">
+                    Edit
+                  </Button>
+                </Link>
+                <Button variant="primary" size="sm" onClick={handleSubmit} disabled={busy}>
+                  Submit
+                </Button>
+                <Button variant="danger" size="sm" onClick={handleDelete} disabled={busy}>
+                  Delete
+                </Button>
+              </Card>
+            )}
+
+            {isChangesRequested && isAuthor && (
+              <Card className="flex flex-wrap gap-2">
+                <Link to={`/memos/${id}/edit`}>
+                  <Button variant="secondary" size="sm">
+                    Edit
+                  </Button>
+                </Link>
+                <Button variant="primary" size="sm" onClick={handleResubmit} disabled={busy}>
+                  Resubmit
+                </Button>
+              </Card>
+            )}
+
+            {!isDraft && !isChangesRequested && !isCurrentApprover && !canAddParticipant && (
+              <p className="text-sm text-stone-500">This memo is read-only for you at this stage.</p>
+            )}
           </div>
-          <div>
-            <span className="text-gray-500">Category:</span> {memo.category}
-          </div>
-          <div>
-            <span className="text-gray-500">Department:</span> {departmentName(memo.departmentId) || 'None'}
-          </div>
-          <div>
-            <span className="text-gray-500">Author:</span> {userName(memo.authorId)}
-          </div>
-          <div>
-            <span className="text-gray-500">Created:</span> {new Date(memo.createdAt).toLocaleString()}
-          </div>
-          <div>
-            <span className="text-gray-500">Updated:</span> {new Date(memo.updatedAt).toLocaleString()}
-          </div>
-          {memo.submittedAt && (
-            <div>
-              <span className="text-gray-500">Submitted:</span> {new Date(memo.submittedAt).toLocaleString()}
-            </div>
-          )}
-          {memo.finalApprovedAt && (
-            <div>
-              <span className="text-gray-500">Final approval:</span>{' '}
-              {new Date(memo.finalApprovedAt).toLocaleString()} by {userName(memo.finalApproverId)}
-            </div>
-          )}
         </div>
-
-        <div>
-          <p className="text-sm font-medium text-gray-700">Body</p>
-          <p className="mt-1 whitespace-pre-wrap text-sm text-gray-800">{memo.body}</p>
-        </div>
-
-        <div>
-          <p className="text-sm font-medium text-gray-700">Workflow History</p>
-          <div className="mt-1">
-            <WorkflowTimeline steps={workflowSteps} />
-          </div>
-        </div>
-
-        <div className="border-t border-gray-200 pt-4">
-          <AttachmentsSection
-            memoId={id}
-            canUpload={canComment}
-            currentUserId={currentUserId}
-            isAuthor={isAuthor}
-          />
-        </div>
-
-        <div className="border-t border-gray-200 pt-4">
-          <CommentsSection memoId={id} canComment={canComment} />
-        </div>
-
-        {isCurrentApprover && <ApprovalActions memoId={id} onActionComplete={fetchAll} />}
-
-        {canAddParticipant && (
-          <AddParticipantControl
-            memoId={id}
-            users={directory.users}
-            existingParticipantIds={memo.workflowParticipants}
-            onActionComplete={fetchAll}
-          />
-        )}
-
-        {isDraft && isAuthor && (
-          <div className="flex gap-2 pt-2">
-            <Link
-              to={`/memos/${id}/edit`}
-              className="rounded bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600"
-            >
-              Edit
-            </Link>
-            <button
-              onClick={handleSubmit}
-              disabled={busy}
-              className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              Submit
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={busy}
-              className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
-            >
-              Delete
-            </button>
-          </div>
-        )}
-
-        {isChangesRequested && isAuthor && (
-          <div className="flex gap-2 pt-2">
-            <Link
-              to={`/memos/${id}/edit`}
-              className="rounded bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600"
-            >
-              Edit
-            </Link>
-            <button
-              onClick={handleResubmit}
-              disabled={busy}
-              className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              Resubmit
-            </button>
-          </div>
-        )}
-
-        {!isDraft && !isChangesRequested && !isCurrentApprover && !canAddParticipant && (
-          <p className="pt-2 text-sm text-gray-500">This memo is read-only for you at this stage.</p>
-        )}
       </div>
     </div>
   );

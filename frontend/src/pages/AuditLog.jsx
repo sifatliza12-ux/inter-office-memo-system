@@ -3,6 +3,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { getAuditLogs } from '../services/auditLogs';
 import { getDirectory } from '../services/directory';
 import NavBar from '../components/NavBar.jsx';
+import PageContainer from '../components/ui/PageContainer.jsx';
+import Card from '../components/ui/Card.jsx';
+import Button from '../components/ui/Button.jsx';
+import Select from '../components/ui/Select.jsx';
+import Input from '../components/ui/Input.jsx';
+import { Table, THead, Th, Tr, Td } from '../components/ui/Table.jsx';
+import { Badge } from '../components/ui/Badge.jsx';
+import EmptyState from '../components/ui/EmptyState.jsx';
+import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 
 const EVENT_TYPES = [
   'USER_LOGIN',
@@ -73,151 +82,144 @@ function AuditLog() {
   const totalPages = Math.max(1, Math.ceil(results.total / (results.limit || PAGE_SIZE)));
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-stone-50 pt-16 lg:pl-60">
       <NavBar />
-      <div className="mx-auto max-w-5xl space-y-4 p-6">
-        <h1 className="text-2xl font-semibold text-gray-800">Audit Log</h1>
+      <PageContainer title="Audit Log">
+        <Card>
+          <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
+            <div className="w-56">
+              <label className="mb-1 block text-xs font-medium text-stone-500" htmlFor="audit-event-type">
+                Event type
+              </label>
+              <Select
+                id="audit-event-type"
+                value={filters.eventType}
+                onChange={(event) => setFilters({ ...filters, eventType: event.target.value })}
+              >
+                <option value="">All</option>
+                {EVENT_TYPES.map((eventType) => (
+                  <option key={eventType} value={eventType}>
+                    {eventType}
+                  </option>
+                ))}
+              </Select>
+            </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3 rounded-lg bg-white p-4 shadow">
-          <div>
-            <label className="block text-xs text-gray-600" htmlFor="audit-event-type">
-              Event type
-            </label>
-            <select
-              id="audit-event-type"
-              value={filters.eventType}
-              onChange={(event) => setFilters({ ...filters, eventType: event.target.value })}
-              className="rounded border border-gray-300 px-2 py-1.5 text-sm"
-            >
-              <option value="">All</option>
-              {EVENT_TYPES.map((eventType) => (
-                <option key={eventType} value={eventType}>
-                  {eventType}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div className="w-48">
+              <label className="mb-1 block text-xs font-medium text-stone-500" htmlFor="audit-user">
+                Actor
+              </label>
+              <Select
+                id="audit-user"
+                value={filters.userId}
+                onChange={(event) => setFilters({ ...filters, userId: event.target.value })}
+              >
+                <option value="">All</option>
+                {users.map((user) => (
+                  <option key={user._id} value={user._id}>
+                    {user.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
 
-          <div>
-            <label className="block text-xs text-gray-600" htmlFor="audit-user">
-              Actor
-            </label>
-            <select
-              id="audit-user"
-              value={filters.userId}
-              onChange={(event) => setFilters({ ...filters, userId: event.target.value })}
-              className="rounded border border-gray-300 px-2 py-1.5 text-sm"
-            >
-              <option value="">All</option>
-              {users.map((user) => (
-                <option key={user._id} value={user._id}>
-                  {user.name}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div className="w-36">
+              <label className="mb-1 block text-xs font-medium text-stone-500" htmlFor="audit-date-from">
+                From
+              </label>
+              <Input
+                id="audit-date-from"
+                type="date"
+                value={filters.dateFrom}
+                onChange={(event) => setFilters({ ...filters, dateFrom: event.target.value })}
+              />
+            </div>
 
-          <div>
-            <label className="block text-xs text-gray-600" htmlFor="audit-date-from">
-              From
-            </label>
-            <input
-              id="audit-date-from"
-              type="date"
-              value={filters.dateFrom}
-              onChange={(event) => setFilters({ ...filters, dateFrom: event.target.value })}
-              className="rounded border border-gray-300 px-2 py-1.5 text-sm"
-            />
-          </div>
+            <div className="w-36">
+              <label className="mb-1 block text-xs font-medium text-stone-500" htmlFor="audit-date-to">
+                To
+              </label>
+              <Input
+                id="audit-date-to"
+                type="date"
+                value={filters.dateTo}
+                onChange={(event) => setFilters({ ...filters, dateTo: event.target.value })}
+              />
+            </div>
 
-          <div>
-            <label className="block text-xs text-gray-600" htmlFor="audit-date-to">
-              To
-            </label>
-            <input
-              id="audit-date-to"
-              type="date"
-              value={filters.dateTo}
-              onChange={(event) => setFilters({ ...filters, dateTo: event.target.value })}
-              className="rounded border border-gray-300 px-2 py-1.5 text-sm"
-            />
-          </div>
+            <Button type="submit" variant="primary">
+              Filter
+            </Button>
+          </form>
+        </Card>
 
-          <button
-            type="submit"
-            className="rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            Filter
-          </button>
-        </form>
+        {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <div className="overflow-x-auto rounded-lg bg-white shadow">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 text-gray-500">
-                <th className="p-3">Timestamp</th>
-                <th className="p-3">Actor</th>
-                <th className="p-3">Event</th>
-                <th className="p-3">Description</th>
+        <Table>
+          <THead>
+            <Th>Timestamp</Th>
+            <Th>Actor</Th>
+            <Th>Event</Th>
+            <Th>Description</Th>
+          </THead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan="4" className="px-4 py-6">
+                  <LoadingSpinner label="Loading..." />
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="4" className="p-4 text-gray-500">
-                    Loading...
-                  </td>
-                </tr>
-              ) : results.auditLogs.length === 0 ? (
-                <tr>
-                  <td colSpan="4" className="p-4 text-gray-500">
-                    No audit log entries found.
-                  </td>
-                </tr>
-              ) : (
-                results.auditLogs.map((entry) => (
-                  <tr key={entry._id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="whitespace-nowrap p-3 text-gray-500">
-                      {new Date(entry.createdAt).toLocaleString()}
-                    </td>
-                    <td className="p-3">{entry.userId?.name || 'Unknown user'}</td>
-                    <td className="whitespace-nowrap p-3 font-mono text-xs text-gray-600">{entry.eventType}</td>
-                    <td className="p-3">{entry.description}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+            ) : results.auditLogs.length === 0 ? (
+              <tr>
+                <td colSpan="4">
+                  <EmptyState title="No audit log entries found" />
+                </td>
+              </tr>
+            ) : (
+              results.auditLogs.map((entry) => (
+                <Tr key={entry._id}>
+                  <Td className="whitespace-nowrap text-stone-500">{new Date(entry.createdAt).toLocaleString()}</Td>
+                  <Td>{entry.userId?.name || 'Unknown user'}</Td>
+                  <Td className="whitespace-nowrap">
+                    <Badge color="plum" className="font-mono">
+                      {entry.eventType}
+                    </Badge>
+                  </Td>
+                  <Td>{entry.description}</Td>
+                </Tr>
+              ))
+            )}
+          </tbody>
+        </Table>
 
         {results.total > 0 && (
-          <div className="flex items-center justify-between text-sm text-gray-600">
+          <div className="flex items-center justify-between text-sm text-stone-600">
             <span>
               Page {results.page} of {totalPages} ({results.total} total)
             </span>
             <div className="flex gap-2">
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 disabled={page <= 1}
                 onClick={() => setPage((current) => Math.max(1, current - 1))}
-                className="rounded border border-gray-300 px-3 py-1 disabled:opacity-50"
               >
                 Previous
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 disabled={page >= totalPages}
                 onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-                className="rounded border border-gray-300 px-3 py-1 disabled:opacity-50"
               >
                 Next
-              </button>
+              </Button>
             </div>
           </div>
         )}
-      </div>
+      </PageContainer>
     </div>
   );
 }

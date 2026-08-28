@@ -3,6 +3,13 @@ import { Link } from 'react-router-dom';
 
 import { listInbox } from '../services/memos';
 import NavBar from '../components/NavBar.jsx';
+import PageContainer from '../components/ui/PageContainer.jsx';
+import Card from '../components/ui/Card.jsx';
+import Select from '../components/ui/Select.jsx';
+import { Table, THead, Th, Tr, Td } from '../components/ui/Table.jsx';
+import { StatusBadge } from '../components/ui/Badge.jsx';
+import EmptyState from '../components/ui/EmptyState.jsx';
+import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 
 const STATUSES = ['submitted', 'changes_requested'];
 const CATEGORIES = ['Administrative', 'Financial', 'Procurement', 'HR', 'Academic', 'Technical', 'General'];
@@ -56,21 +63,18 @@ function Inbox() {
   }, [fetchInbox]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-stone-50 pt-16 lg:pl-60">
       <NavBar />
-      <div className="mx-auto max-w-5xl space-y-4 p-6">
-        <h1 className="text-2xl font-semibold text-gray-800">Inbox</h1>
-
-        <div className="flex flex-wrap items-center gap-3 rounded-lg bg-white p-4 shadow">
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600" htmlFor="inbox-status-filter">
+      <PageContainer title="Inbox" subtitle="Memos waiting on your review or action">
+        <Card className="flex flex-wrap items-end gap-3">
+          <div className="w-44">
+            <label className="mb-1 block text-xs font-medium text-stone-500" htmlFor="inbox-status-filter">
               Status
             </label>
-            <select
+            <Select
               id="inbox-status-filter"
               value={filters.status}
               onChange={(event) => setFilters({ ...filters, status: event.target.value })}
-              className="rounded border border-gray-300 px-2 py-1 text-sm"
             >
               <option value="">All</option>
               {STATUSES.map((status) => (
@@ -78,18 +82,17 @@ function Inbox() {
                   {status}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600" htmlFor="inbox-category-filter">
+          <div className="w-44">
+            <label className="mb-1 block text-xs font-medium text-stone-500" htmlFor="inbox-category-filter">
               Category
             </label>
-            <select
+            <Select
               id="inbox-category-filter"
               value={filters.category}
               onChange={(event) => setFilters({ ...filters, category: event.target.value })}
-              className="rounded border border-gray-300 px-2 py-1 text-sm"
             >
               <option value="">All</option>
               {CATEGORIES.map((category) => (
@@ -97,18 +100,17 @@ function Inbox() {
                   {category}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600" htmlFor="inbox-priority-filter">
+          <div className="w-36">
+            <label className="mb-1 block text-xs font-medium text-stone-500" htmlFor="inbox-priority-filter">
               Priority
             </label>
-            <select
+            <Select
               id="inbox-priority-filter"
               value={filters.priority}
               onChange={(event) => setFilters({ ...filters, priority: event.target.value })}
-              className="rounded border border-gray-300 px-2 py-1 text-sm"
             >
               <option value="">All</option>
               {PRIORITIES.map((priority) => (
@@ -116,61 +118,61 @@ function Inbox() {
                   {priority}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
-        </div>
+        </Card>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
-        <div className="overflow-x-auto rounded-lg bg-white shadow">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 text-gray-500">
-                <th className="p-3">Reference #</th>
-                <th className="p-3">Subject</th>
-                <th className="p-3">Author</th>
-                <th className="p-3">Department</th>
-                <th className="p-3">Priority</th>
-                <th className="p-3">Status</th>
-                <th className="p-3">Submitted</th>
-                <th className="p-3">Age</th>
+        <Table>
+          <THead>
+            <Th>Reference #</Th>
+            <Th>Subject</Th>
+            <Th>Author</Th>
+            <Th>Department</Th>
+            <Th>Priority</Th>
+            <Th>Status</Th>
+            <Th>Submitted</Th>
+            <Th>Age</Th>
+          </THead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan="8" className="px-4 py-6">
+                  <LoadingSpinner label="Loading..." />
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="8" className="p-4 text-gray-500">
-                    Loading...
-                  </td>
-                </tr>
-              ) : memos.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="p-4 text-gray-500">
-                    Nothing is waiting on you right now.
-                  </td>
-                </tr>
-              ) : (
-                memos.map((memo) => (
-                  <tr key={memo._id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="p-3">
-                      <Link to={`/memos/${memo._id}`} className="text-blue-600 hover:underline">
-                        {memo.referenceNumber}
-                      </Link>
-                    </td>
-                    <td className="p-3">{memo.subject}</td>
-                    <td className="p-3">{memo.authorId?.name || '—'}</td>
-                    <td className="p-3">{memo.departmentId?.name || '—'}</td>
-                    <td className="p-3">{memo.priority}</td>
-                    <td className="p-3">{memo.status}</td>
-                    <td className="p-3">{memo.submittedAt ? new Date(memo.submittedAt).toLocaleDateString() : '—'}</td>
-                    <td className="p-3">{formatAge(memo.ageMs)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            ) : memos.length === 0 ? (
+              <tr>
+                <td colSpan="8">
+                  <EmptyState title="Nothing is waiting on you right now" />
+                </td>
+              </tr>
+            ) : (
+              memos.map((memo) => (
+                <Tr key={memo._id}>
+                  <Td className="font-mono text-xs">
+                    <Link to={`/memos/${memo._id}`} className="font-medium text-plum-700 hover:underline">
+                      {memo.referenceNumber}
+                    </Link>
+                  </Td>
+                  <Td>{memo.subject}</Td>
+                  <Td>{memo.authorId?.name || '—'}</Td>
+                  <Td>{memo.departmentId?.name || '—'}</Td>
+                  <Td className="capitalize">{memo.priority}</Td>
+                  <Td>
+                    <StatusBadge status={memo.status} />
+                  </Td>
+                  <Td className="whitespace-nowrap text-stone-500">
+                    {memo.submittedAt ? new Date(memo.submittedAt).toLocaleDateString() : '—'}
+                  </Td>
+                  <Td className="text-stone-500">{formatAge(memo.ageMs)}</Td>
+                </Tr>
+              ))
+            )}
+          </tbody>
+        </Table>
+      </PageContainer>
     </div>
   );
 }

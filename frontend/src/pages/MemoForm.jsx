@@ -7,6 +7,13 @@ import { getDirectory } from '../services/directory';
 import { uploadAttachment } from '../services/attachments';
 import ParticipantPicker from '../components/ParticipantPicker.jsx';
 import NavBar from '../components/NavBar.jsx';
+import Card from '../components/ui/Card.jsx';
+import Button from '../components/ui/Button.jsx';
+import Field from '../components/ui/Field.jsx';
+import Input from '../components/ui/Input.jsx';
+import Select from '../components/ui/Select.jsx';
+import Textarea from '../components/ui/Textarea.jsx';
+import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 
 const formatSize = (bytes) => {
   if (bytes < 1024) return `${bytes} B`;
@@ -182,169 +189,161 @@ function MemoForm() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <p className="text-sm text-gray-500">Loading...</p>
+      <div className="flex min-h-screen items-center justify-center bg-stone-50">
+        <LoadingSpinner label="Loading..." />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-stone-50 pt-16 lg:pl-60">
       <NavBar />
-      <form onSubmit={saveDraft} className="mx-auto max-w-3xl space-y-4 rounded-lg bg-white p-6 m-6 shadow">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-gray-800">{isEditing ? 'Edit Memo' : 'Create Memo'}</h1>
-          <Link to="/memos" className="text-sm text-blue-600 hover:underline">
-            Back to My Memos
-          </Link>
-        </div>
+      <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
+        <Card className="animate-fade-in-up">
+          <form onSubmit={saveDraft} className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-semibold tracking-tight text-stone-900">
+                {isEditing ? 'Edit Memo' : 'Create Memo'}
+              </h1>
+              <Link to="/memos" className="text-sm font-medium text-plum-700 hover:underline">
+                Back to My Memos
+              </Link>
+            </div>
 
-        {error && (
-          <p className="text-sm text-red-600">
-            {error}
-            {createdMemoId && (
-              <>
-                {' '}
-                <Link to={`/memos/${createdMemoId}`} className="underline">
-                  Go to memo
-                </Link>
-              </>
+            {error && (
+              <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+                {error}
+                {createdMemoId && (
+                  <>
+                    {' '}
+                    <Link to={`/memos/${createdMemoId}`} className="underline">
+                      Go to memo
+                    </Link>
+                  </>
+                )}
+              </p>
             )}
-          </p>
-        )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Subject</label>
-          <input
-            required
-            value={form.subject}
-            onChange={(event) => setForm({ ...form, subject: event.target.value })}
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
-          />
-        </div>
+            <Field label="Subject" htmlFor="memo-subject" required>
+              <Input
+                id="memo-subject"
+                required
+                value={form.subject}
+                onChange={(event) => setForm({ ...form, subject: event.target.value })}
+              />
+            </Field>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Body</label>
-          <textarea
-            required
-            rows={6}
-            value={form.body}
-            onChange={(event) => setForm({ ...form, body: event.target.value })}
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
-          />
-        </div>
+            <Field label="Body" htmlFor="memo-body" required>
+              <Textarea
+                id="memo-body"
+                required
+                rows={6}
+                value={form.body}
+                onChange={(event) => setForm({ ...form, body: event.target.value })}
+              />
+            </Field>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Category</label>
-            <select
-              value={form.category}
-              onChange={(event) => setForm({ ...form, category: event.target.value })}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
-            >
-              {CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Priority</label>
-            <select
-              value={form.priority}
-              onChange={(event) => setForm({ ...form, priority: event.target.value })}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
-            >
-              {PRIORITIES.map((priority) => (
-                <option key={priority} value={priority}>
-                  {priority}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Category" htmlFor="memo-category">
+                <Select
+                  id="memo-category"
+                  value={form.category}
+                  onChange={(event) => setForm({ ...form, category: event.target.value })}
+                >
+                  {CATEGORIES.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Priority" htmlFor="memo-priority">
+                <Select
+                  id="memo-priority"
+                  value={form.priority}
+                  onChange={(event) => setForm({ ...form, priority: event.target.value })}
+                >
+                  {PRIORITIES.map((priority) => (
+                    <option key={priority} value={priority}>
+                      {priority}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Department</label>
-          <select
-            value={form.departmentId}
-            onChange={(event) => setForm({ ...form, departmentId: event.target.value })}
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
-          >
-            <option value="">None</option>
-            {directory.departments.map((department) => (
-              <option key={department._id} value={department._id}>
-                {department.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <p className="text-sm font-medium text-gray-700">Workflow participants</p>
-          <ParticipantPicker
-            users={directory.users}
-            selectedIds={form.workflowParticipants}
-            onChange={(ids) => setForm({ ...form, workflowParticipants: ids })}
-          />
-        </div>
-
-        {!isEditing && (
-          <div>
-            <p className="text-sm font-medium text-gray-700">Attachments</p>
-            <p className="mt-1 text-xs text-gray-400">
-              Selected files are uploaded once the memo is created. PDF, Word, Excel, PNG, or JPEG — up to 10MB
-              each.
-            </p>
-            <input
-              type="file"
-              multiple
-              onChange={handleStageFiles}
-              className="mt-2 block text-sm text-gray-700"
-            />
-            {stagedFiles.length > 0 && (
-              <ul className="mt-2 space-y-1">
-                {stagedFiles.map((file, index) => (
-                  <li
-                    key={`${file.name}-${index}`}
-                    className="flex items-center justify-between rounded border border-gray-200 px-2 py-1 text-sm"
-                  >
-                    <span>
-                      {file.name} ({formatSize(file.size)})
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => removeStagedFile(index)}
-                      className="text-xs text-red-600 hover:underline"
-                    >
-                      Remove
-                    </button>
-                  </li>
+            <Field label="Department" htmlFor="memo-department">
+              <Select
+                id="memo-department"
+                value={form.departmentId}
+                onChange={(event) => setForm({ ...form, departmentId: event.target.value })}
+              >
+                <option value="">None</option>
+                {directory.departments.map((department) => (
+                  <option key={department._id} value={department._id}>
+                    {department.name}
+                  </option>
                 ))}
-              </ul>
-            )}
-          </div>
-        )}
+              </Select>
+            </Field>
 
-        <div className="flex gap-2 pt-2">
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600 disabled:opacity-50"
-          >
-            Save as Draft
-          </button>
-          <button
-            type="button"
-            disabled={submitting}
-            onClick={saveAndSubmit}
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {isResubmit ? 'Resubmit' : 'Submit'}
-          </button>
-        </div>
-      </form>
+            <div>
+              <p className="mb-1 text-sm font-medium text-stone-700">Workflow participants</p>
+              <ParticipantPicker
+                users={directory.users}
+                selectedIds={form.workflowParticipants}
+                onChange={(ids) => setForm({ ...form, workflowParticipants: ids })}
+              />
+            </div>
+
+            {!isEditing && (
+              <div>
+                <p className="text-sm font-medium text-stone-700">Attachments</p>
+                <p className="mt-1 text-xs text-stone-400">
+                  Selected files are uploaded once the memo is created. PDF, Word, Excel, PNG, or JPEG — up to 10MB
+                  each.
+                </p>
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleStageFiles}
+                  className="mt-2 block w-full text-sm text-stone-600 file:mr-3 file:rounded-md file:border-0 file:bg-plum-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-plum-700 hover:file:bg-plum-100"
+                />
+                {stagedFiles.length > 0 && (
+                  <ul className="mt-2 space-y-1.5">
+                    {stagedFiles.map((file, index) => (
+                      <li
+                        key={`${file.name}-${index}`}
+                        className="flex items-center justify-between rounded-md border border-stone-200 px-3 py-1.5 text-sm"
+                      >
+                        <span className="text-stone-700">
+                          {file.name} <span className="text-stone-400">({formatSize(file.size)})</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeStagedFile(index)}
+                          className="text-xs font-medium text-red-600 hover:underline"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-2">
+              <Button type="submit" variant="secondary" disabled={submitting}>
+                Save as Draft
+              </Button>
+              <Button type="button" variant="primary" disabled={submitting} onClick={saveAndSubmit}>
+                {isResubmit ? 'Resubmit' : 'Submit'}
+              </Button>
+            </div>
+          </form>
+        </Card>
+      </div>
     </div>
   );
 }

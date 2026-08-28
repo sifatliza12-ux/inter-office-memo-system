@@ -4,6 +4,15 @@ import { Link } from 'react-router-dom';
 import { searchMemos } from '../services/search';
 import { getDirectory } from '../services/directory';
 import NavBar from '../components/NavBar.jsx';
+import PageContainer from '../components/ui/PageContainer.jsx';
+import Card from '../components/ui/Card.jsx';
+import Button from '../components/ui/Button.jsx';
+import Input from '../components/ui/Input.jsx';
+import Select from '../components/ui/Select.jsx';
+import { Table, THead, Th, Tr, Td } from '../components/ui/Table.jsx';
+import { StatusBadge } from '../components/ui/Badge.jsx';
+import EmptyState from '../components/ui/EmptyState.jsx';
+import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 
 const STATUSES = ['draft', 'submitted', 'changes_requested', 'approved', 'rejected'];
 const CATEGORIES = ['Administrative', 'Financial', 'Procurement', 'HR', 'Academic', 'Technical', 'General'];
@@ -57,206 +66,196 @@ function Search() {
   const totalPages = Math.max(1, Math.ceil(results.total / (results.limit || PAGE_SIZE)));
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-stone-50 pt-16 lg:pl-60">
       <NavBar />
-      <div className="mx-auto max-w-5xl space-y-4 p-6">
-        <h1 className="text-2xl font-semibold text-gray-800">Search Memos</h1>
-
-        <form onSubmit={handleSubmit} className="space-y-3 rounded-lg bg-white p-4 shadow">
-          <div>
-            <label className="block text-sm font-medium text-gray-700" htmlFor="search-q">
-              Search
-            </label>
-            <input
-              id="search-q"
-              value={filters.q}
-              onChange={(event) => setFilters({ ...filters, q: event.target.value })}
-              placeholder="Subject, body, or reference number"
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
-            />
-          </div>
-
-          <div className="flex flex-wrap items-end gap-3">
+      <PageContainer title="Search Memos">
+        <Card>
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label className="block text-xs text-gray-600" htmlFor="search-status">
-                Status
+              <label className="mb-1 block text-sm font-medium text-stone-700" htmlFor="search-q">
+                Search
               </label>
-              <select
-                id="search-status"
-                value={filters.status}
-                onChange={(event) => setFilters({ ...filters, status: event.target.value })}
-                className="rounded border border-gray-300 px-2 py-1.5 text-sm"
-              >
-                <option value="">All</option>
-                {STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs text-gray-600" htmlFor="search-category">
-                Category
-              </label>
-              <select
-                id="search-category"
-                value={filters.category}
-                onChange={(event) => setFilters({ ...filters, category: event.target.value })}
-                className="rounded border border-gray-300 px-2 py-1.5 text-sm"
-              >
-                <option value="">All</option>
-                {CATEGORIES.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs text-gray-600" htmlFor="search-priority">
-                Priority
-              </label>
-              <select
-                id="search-priority"
-                value={filters.priority}
-                onChange={(event) => setFilters({ ...filters, priority: event.target.value })}
-                className="rounded border border-gray-300 px-2 py-1.5 text-sm"
-              >
-                <option value="">All</option>
-                {PRIORITIES.map((priority) => (
-                  <option key={priority} value={priority}>
-                    {priority}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs text-gray-600" htmlFor="search-department">
-                Department
-              </label>
-              <select
-                id="search-department"
-                value={filters.department}
-                onChange={(event) => setFilters({ ...filters, department: event.target.value })}
-                className="rounded border border-gray-300 px-2 py-1.5 text-sm"
-              >
-                <option value="">All</option>
-                {departments.map((department) => (
-                  <option key={department._id} value={department._id}>
-                    {department.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs text-gray-600" htmlFor="search-date-from">
-                From
-              </label>
-              <input
-                id="search-date-from"
-                type="date"
-                value={filters.dateFrom}
-                onChange={(event) => setFilters({ ...filters, dateFrom: event.target.value })}
-                className="rounded border border-gray-300 px-2 py-1.5 text-sm"
+              <Input
+                id="search-q"
+                value={filters.q}
+                onChange={(event) => setFilters({ ...filters, q: event.target.value })}
+                placeholder="Subject, body, or reference number"
               />
             </div>
 
-            <div>
-              <label className="block text-xs text-gray-600" htmlFor="search-date-to">
-                To
-              </label>
-              <input
-                id="search-date-to"
-                type="date"
-                value={filters.dateTo}
-                onChange={(event) => setFilters({ ...filters, dateTo: event.target.value })}
-                className="rounded border border-gray-300 px-2 py-1.5 text-sm"
-              />
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="w-40">
+                <label className="mb-1 block text-xs font-medium text-stone-500" htmlFor="search-status">
+                  Status
+                </label>
+                <Select
+                  id="search-status"
+                  value={filters.status}
+                  onChange={(event) => setFilters({ ...filters, status: event.target.value })}
+                >
+                  <option value="">All</option>
+                  {STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+
+              <div className="w-44">
+                <label className="mb-1 block text-xs font-medium text-stone-500" htmlFor="search-category">
+                  Category
+                </label>
+                <Select
+                  id="search-category"
+                  value={filters.category}
+                  onChange={(event) => setFilters({ ...filters, category: event.target.value })}
+                >
+                  <option value="">All</option>
+                  {CATEGORIES.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+
+              <div className="w-36">
+                <label className="mb-1 block text-xs font-medium text-stone-500" htmlFor="search-priority">
+                  Priority
+                </label>
+                <Select
+                  id="search-priority"
+                  value={filters.priority}
+                  onChange={(event) => setFilters({ ...filters, priority: event.target.value })}
+                >
+                  <option value="">All</option>
+                  {PRIORITIES.map((priority) => (
+                    <option key={priority} value={priority}>
+                      {priority}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+
+              <div className="w-44">
+                <label className="mb-1 block text-xs font-medium text-stone-500" htmlFor="search-department">
+                  Department
+                </label>
+                <Select
+                  id="search-department"
+                  value={filters.department}
+                  onChange={(event) => setFilters({ ...filters, department: event.target.value })}
+                >
+                  <option value="">All</option>
+                  {departments.map((department) => (
+                    <option key={department._id} value={department._id}>
+                      {department.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+
+              <div className="w-36">
+                <label className="mb-1 block text-xs font-medium text-stone-500" htmlFor="search-date-from">
+                  From
+                </label>
+                <Input
+                  id="search-date-from"
+                  type="date"
+                  value={filters.dateFrom}
+                  onChange={(event) => setFilters({ ...filters, dateFrom: event.target.value })}
+                />
+              </div>
+
+              <div className="w-36">
+                <label className="mb-1 block text-xs font-medium text-stone-500" htmlFor="search-date-to">
+                  To
+                </label>
+                <Input
+                  id="search-date-to"
+                  type="date"
+                  value={filters.dateTo}
+                  onChange={(event) => setFilters({ ...filters, dateTo: event.target.value })}
+                />
+              </div>
+
+              <Button type="submit" variant="primary">
+                Search
+              </Button>
             </div>
+          </form>
+        </Card>
 
-            <button
-              type="submit"
-              className="rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              Search
-            </button>
-          </div>
-        </form>
+        {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <div className="overflow-x-auto rounded-lg bg-white shadow">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 text-gray-500">
-                <th className="p-3">Reference #</th>
-                <th className="p-3">Subject</th>
-                <th className="p-3">Status</th>
-                <th className="p-3">Priority</th>
+        <Table>
+          <THead>
+            <Th>Reference #</Th>
+            <Th>Subject</Th>
+            <Th>Status</Th>
+            <Th>Priority</Th>
+          </THead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan="4" className="px-4 py-6">
+                  <LoadingSpinner label="Searching..." />
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="4" className="p-4 text-gray-500">
-                    Searching...
-                  </td>
-                </tr>
-              ) : results.memos.length === 0 ? (
-                <tr>
-                  <td colSpan="4" className="p-4 text-gray-500">
-                    No memos found.
-                  </td>
-                </tr>
-              ) : (
-                results.memos.map((memo) => (
-                  <tr key={memo._id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="p-3">
-                      <Link to={`/memos/${memo._id}`} className="text-blue-600 hover:underline">
-                        {memo.referenceNumber}
-                      </Link>
-                    </td>
-                    <td className="p-3">{memo.subject}</td>
-                    <td className="p-3">{memo.status}</td>
-                    <td className="p-3">{memo.priority}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+            ) : results.memos.length === 0 ? (
+              <tr>
+                <td colSpan="4">
+                  <EmptyState title="No memos found" />
+                </td>
+              </tr>
+            ) : (
+              results.memos.map((memo) => (
+                <Tr key={memo._id}>
+                  <Td className="font-mono text-xs">
+                    <Link to={`/memos/${memo._id}`} className="font-medium text-plum-700 hover:underline">
+                      {memo.referenceNumber}
+                    </Link>
+                  </Td>
+                  <Td>{memo.subject}</Td>
+                  <Td>
+                    <StatusBadge status={memo.status} />
+                  </Td>
+                  <Td className="capitalize">{memo.priority}</Td>
+                </Tr>
+              ))
+            )}
+          </tbody>
+        </Table>
 
         {results.total > 0 && (
-          <div className="flex items-center justify-between text-sm text-gray-600">
+          <div className="flex items-center justify-between text-sm text-stone-600">
             <span>
               Page {results.page} of {totalPages} ({results.total} total)
             </span>
             <div className="flex gap-2">
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 disabled={page <= 1}
                 onClick={() => setPage((current) => Math.max(1, current - 1))}
-                className="rounded border border-gray-300 px-3 py-1 disabled:opacity-50"
               >
                 Previous
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 disabled={page >= totalPages}
                 onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-                className="rounded border border-gray-300 px-3 py-1 disabled:opacity-50"
               >
                 Next
-              </button>
+              </Button>
             </div>
           </div>
         )}
-      </div>
+      </PageContainer>
     </div>
   );
 }

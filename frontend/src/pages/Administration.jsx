@@ -1,19 +1,18 @@
 import NavBar from '../components/NavBar.jsx';
+import PageContainer from '../components/ui/PageContainer.jsx';
 import DepartmentsSection from '../components/DepartmentsSection.jsx';
 import UsersSection from '../components/UsersSection.jsx';
 import OrganizationStatsSection from '../components/OrganizationStatsSection.jsx';
 
 function Administration() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-stone-50 pt-16 lg:pl-60">
       <NavBar />
-      <div className="mx-auto max-w-5xl space-y-6 p-6">
-        <h1 className="text-2xl font-semibold text-gray-800">Administration</h1>
-
+      <PageContainer title="Administration">
         <OrganizationStatsSection />
         <DepartmentsSection />
         <UsersSection />
-      </div>
+      </PageContainer>
     </div>
   );
 }

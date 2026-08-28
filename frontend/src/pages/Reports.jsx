@@ -3,6 +3,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { getReports } from '../services/reports';
 import { getDirectory } from '../services/directory';
 import NavBar from '../components/NavBar.jsx';
+import PageContainer from '../components/ui/PageContainer.jsx';
+import Card from '../components/ui/Card.jsx';
+import Button from '../components/ui/Button.jsx';
+import Select from '../components/ui/Select.jsx';
+import Input from '../components/ui/Input.jsx';
+import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
+import EmptyState from '../components/ui/EmptyState.jsx';
 
 const STATUS_LABELS = {
   draft: 'Draft',
@@ -22,6 +29,13 @@ const formatHours = (hours) => {
   }
   return `${hours.toFixed(1)}h`;
 };
+
+const STAT_CARDS = [
+  { key: 'urgentMemoCount', label: 'Urgent Memos', accent: 'text-red-600' },
+  { key: 'pendingApprovalsCount', label: 'Pending Approvals', accent: 'text-amber-600' },
+  { key: 'rejectedCount', label: 'Rejected', accent: 'text-stone-800' },
+  { key: 'changeRequestCount', label: 'Change Requests', accent: 'text-stone-800' },
+];
 
 function Reports() {
   const [filters, setFilters] = useState(emptyFilters);
@@ -69,171 +83,150 @@ function Reports() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-stone-50 pt-16 lg:pl-60">
       <NavBar />
-      <div className="mx-auto max-w-5xl space-y-4 p-6">
-        <h1 className="text-2xl font-semibold text-gray-800">Reports</h1>
+      <PageContainer title="Reports">
+        <Card>
+          <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
+            <div className="w-36">
+              <label className="mb-1 block text-xs font-medium text-stone-500" htmlFor="report-date-from">
+                From
+              </label>
+              <Input
+                id="report-date-from"
+                type="date"
+                value={filters.dateFrom}
+                onChange={(event) => setFilters({ ...filters, dateFrom: event.target.value })}
+              />
+            </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3 rounded-lg bg-white p-4 shadow">
-          <div>
-            <label className="block text-xs text-gray-600" htmlFor="report-date-from">
-              From
-            </label>
-            <input
-              id="report-date-from"
-              type="date"
-              value={filters.dateFrom}
-              onChange={(event) => setFilters({ ...filters, dateFrom: event.target.value })}
-              className="rounded border border-gray-300 px-2 py-1.5 text-sm"
-            />
-          </div>
+            <div className="w-36">
+              <label className="mb-1 block text-xs font-medium text-stone-500" htmlFor="report-date-to">
+                To
+              </label>
+              <Input
+                id="report-date-to"
+                type="date"
+                value={filters.dateTo}
+                onChange={(event) => setFilters({ ...filters, dateTo: event.target.value })}
+              />
+            </div>
 
-          <div>
-            <label className="block text-xs text-gray-600" htmlFor="report-date-to">
-              To
-            </label>
-            <input
-              id="report-date-to"
-              type="date"
-              value={filters.dateTo}
-              onChange={(event) => setFilters({ ...filters, dateTo: event.target.value })}
-              className="rounded border border-gray-300 px-2 py-1.5 text-sm"
-            />
-          </div>
+            <div className="w-48">
+              <label className="mb-1 block text-xs font-medium text-stone-500" htmlFor="report-department">
+                Department
+              </label>
+              <Select
+                id="report-department"
+                value={filters.department}
+                onChange={(event) => setFilters({ ...filters, department: event.target.value })}
+              >
+                <option value="">All</option>
+                {departments.map((department) => (
+                  <option key={department._id} value={department._id}>
+                    {department.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
 
-          <div>
-            <label className="block text-xs text-gray-600" htmlFor="report-department">
-              Department
-            </label>
-            <select
-              id="report-department"
-              value={filters.department}
-              onChange={(event) => setFilters({ ...filters, department: event.target.value })}
-              className="rounded border border-gray-300 px-2 py-1.5 text-sm"
-            >
-              <option value="">All</option>
-              {departments.map((department) => (
-                <option key={department._id} value={department._id}>
-                  {department.name}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div className="w-48">
+              <label className="mb-1 block text-xs font-medium text-stone-500" htmlFor="report-category">
+                Category
+              </label>
+              <Select
+                id="report-category"
+                value={filters.category}
+                onChange={(event) => setFilters({ ...filters, category: event.target.value })}
+              >
+                <option value="">All</option>
+                {CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </Select>
+            </div>
 
-          <div>
-            <label className="block text-xs text-gray-600" htmlFor="report-category">
-              Category
-            </label>
-            <select
-              id="report-category"
-              value={filters.category}
-              onChange={(event) => setFilters({ ...filters, category: event.target.value })}
-              className="rounded border border-gray-300 px-2 py-1.5 text-sm"
-            >
-              <option value="">All</option>
-              {CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-          </div>
+            <Button type="submit" variant="primary">
+              Apply
+            </Button>
+            <Button type="button" variant="outline" onClick={handleReset}>
+              Reset
+            </Button>
+          </form>
+        </Card>
 
-          <button
-            type="submit"
-            className="rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            Apply
-          </button>
-          <button
-            type="button"
-            onClick={handleReset}
-            className="rounded border border-gray-300 px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
-          >
-            Reset
-          </button>
-        </form>
-
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {loading && <p className="text-sm text-gray-500">Loading...</p>}
+        {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+        {loading && <LoadingSpinner label="Loading..." className="justify-start" />}
 
         {report && (
-          <>
+          <div className="animate-fade-in-up space-y-6">
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-              <div className="rounded-lg bg-white p-4 text-center shadow">
-                <p className="text-xs text-gray-500">Urgent Memos</p>
-                <p className="mt-1 text-2xl font-semibold text-red-600">{report.urgentMemoCount}</p>
-              </div>
-              <div className="rounded-lg bg-white p-4 text-center shadow">
-                <p className="text-xs text-gray-500">Pending Approvals</p>
-                <p className="mt-1 text-2xl font-semibold text-amber-600">{report.pendingApprovalsCount}</p>
-              </div>
-              <div className="rounded-lg bg-white p-4 text-center shadow">
-                <p className="text-xs text-gray-500">Rejected</p>
-                <p className="mt-1 text-2xl font-semibold text-gray-800">{report.rejectedCount}</p>
-              </div>
-              <div className="rounded-lg bg-white p-4 text-center shadow">
-                <p className="text-xs text-gray-500">Change Requests</p>
-                <p className="mt-1 text-2xl font-semibold text-gray-800">{report.changeRequestCount}</p>
-              </div>
-              <div className="rounded-lg bg-white p-4 text-center shadow">
-                <p className="text-xs text-gray-500">Avg. Completion Time</p>
-                <p className="mt-1 text-2xl font-semibold text-gray-800">
+              {STAT_CARDS.map(({ key, label, accent }) => (
+                <Card key={key} className="text-center">
+                  <p className="text-xs text-stone-500">{label}</p>
+                  <p className={`mt-1 text-2xl font-semibold ${accent}`}>{report[key]}</p>
+                </Card>
+              ))}
+              <Card className="text-center">
+                <p className="text-xs text-stone-500">Avg. Completion Time</p>
+                <p className="mt-1 text-2xl font-semibold text-stone-800">
                   {formatHours(report.averageWorkflowCompletionTime)}
                 </p>
-              </div>
+              </Card>
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="rounded-lg bg-white p-4 shadow">
-                <h2 className="text-sm font-semibold text-gray-800">Memos by Status</h2>
-                <table className="mt-2 w-full text-left text-sm">
+              <Card>
+                <h2 className="text-sm font-semibold text-stone-800">Memos by Status</h2>
+                <table className="mt-3 w-full text-left text-sm">
                   <tbody>
                     {Object.entries(report.memosByStatus).map(([status, count]) => (
-                      <tr key={status} className="border-b border-gray-100 last:border-0">
-                        <td className="py-1 text-gray-600">{STATUS_LABELS[status] || status}</td>
-                        <td className="py-1 text-right font-medium text-gray-800">{count}</td>
+                      <tr key={status} className="border-b border-stone-100 last:border-0">
+                        <td className="py-1.5 text-stone-600">{STATUS_LABELS[status] || status}</td>
+                        <td className="py-1.5 text-right font-medium text-stone-800">{count}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </Card>
 
-              <div className="rounded-lg bg-white p-4 shadow">
-                <h2 className="text-sm font-semibold text-gray-800">Memos by Category</h2>
-                <table className="mt-2 w-full text-left text-sm">
+              <Card>
+                <h2 className="text-sm font-semibold text-stone-800">Memos by Category</h2>
+                <table className="mt-3 w-full text-left text-sm">
                   <tbody>
                     {Object.entries(report.memosByCategory).map(([category, count]) => (
-                      <tr key={category} className="border-b border-gray-100 last:border-0">
-                        <td className="py-1 text-gray-600">{category}</td>
-                        <td className="py-1 text-right font-medium text-gray-800">{count}</td>
+                      <tr key={category} className="border-b border-stone-100 last:border-0">
+                        <td className="py-1.5 text-stone-600">{category}</td>
+                        <td className="py-1.5 text-right font-medium text-stone-800">{count}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </Card>
 
-              <div className="rounded-lg bg-white p-4 shadow">
-                <h2 className="text-sm font-semibold text-gray-800">Memos by Department</h2>
+              <Card>
+                <h2 className="text-sm font-semibold text-stone-800">Memos by Department</h2>
                 {report.memosByDepartment.length === 0 ? (
-                  <p className="mt-2 text-sm text-gray-500">No memos found.</p>
+                  <EmptyState title="No memos found" />
                 ) : (
-                  <table className="mt-2 w-full text-left text-sm">
+                  <table className="mt-3 w-full text-left text-sm">
                     <tbody>
                       {report.memosByDepartment.map((row) => (
-                        <tr key={row.department} className="border-b border-gray-100 last:border-0">
-                          <td className="py-1 text-gray-600">{row.department}</td>
-                          <td className="py-1 text-right font-medium text-gray-800">{row.count}</td>
+                        <tr key={row.department} className="border-b border-stone-100 last:border-0">
+                          <td className="py-1.5 text-stone-600">{row.department}</td>
+                          <td className="py-1.5 text-right font-medium text-stone-800">{row.count}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 )}
-              </div>
+              </Card>
             </div>
-          </>
+          </div>
         )}
-      </div>
+      </PageContainer>
     </div>
   );
 }

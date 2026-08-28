@@ -3,6 +3,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { listUsers, createUser, updateUser, updateUserStatus } from '../services/users';
 import { listDepartments } from '../services/departments';
 import { useAuth } from '../context/AuthContext.jsx';
+import Card from './ui/Card.jsx';
+import Button from './ui/Button.jsx';
+import Select from './ui/Select.jsx';
+import Field from './ui/Field.jsx';
+import Input from './ui/Input.jsx';
+import { Table, THead, Th, Tr, Td } from './ui/Table.jsx';
+import EmptyState from './ui/EmptyState.jsx';
+import LoadingSpinner from './ui/LoadingSpinner.jsx';
 
 const emptyForm = { name: '', email: '', password: '', role: 'employee', designation: '', departmentId: '' };
 
@@ -116,44 +124,41 @@ function UsersSection() {
   const isSelf = (user) => currentUser && user._id === currentUser._id;
 
   return (
-    <section className="rounded-lg bg-white p-6 shadow">
+    <Card as="section">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-800">Users</h2>
-        <button
-          onClick={openCreateForm}
-          className="rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
-        >
+        <h2 className="text-lg font-semibold text-stone-800">Users</h2>
+        <Button variant="primary" size="sm" onClick={openCreateForm}>
           New User
-        </button>
+        </Button>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-600" htmlFor="user-status-filter">
+          <label className="text-sm text-stone-500" htmlFor="user-status-filter">
             Status
           </label>
-          <select
+          <Select
             id="user-status-filter"
             value={filters.status}
             onChange={(event) => setFilters({ ...filters, status: event.target.value })}
-            className="rounded border border-gray-300 px-2 py-1 text-sm"
+            className="w-36"
           >
             <option value="">All</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
             <option value="suspended">Suspended</option>
-          </select>
+          </Select>
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-600" htmlFor="user-department-filter">
+          <label className="text-sm text-stone-500" htmlFor="user-department-filter">
             Department
           </label>
-          <select
+          <Select
             id="user-department-filter"
             value={filters.departmentId}
             onChange={(event) => setFilters({ ...filters, departmentId: event.target.value })}
-            className="rounded border border-gray-300 px-2 py-1 text-sm"
+            className="w-44"
           >
             <option value="">All</option>
             {departments.map((department) => (
@@ -161,91 +166,81 @@ function UsersSection() {
                 {department.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-600" htmlFor="user-role-filter">
+          <label className="text-sm text-stone-500" htmlFor="user-role-filter">
             Role
           </label>
-          <select
+          <Select
             id="user-role-filter"
             value={filters.role}
             onChange={(event) => setFilters({ ...filters, role: event.target.value })}
-            className="rounded border border-gray-300 px-2 py-1 text-sm"
+            className="w-36"
           >
             <option value="">All</option>
             <option value="admin">Admin</option>
             <option value="manager">Manager</option>
             <option value="employee">Employee</option>
-          </select>
+          </Select>
         </div>
       </div>
 
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="mt-4 space-y-3 rounded border border-gray-200 p-4">
+        <form onSubmit={handleSubmit} className="mt-4 space-y-3 rounded-lg border border-stone-200 bg-stone-50/50 p-4">
           {formError && <p className="text-sm text-red-600">{formError}</p>}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Name</label>
-            <input
+          <Field label="Name" htmlFor="user-name" required>
+            <Input
+              id="user-name"
               required
               value={form.name}
               onChange={(event) => setForm({ ...form, name: event.target.value })}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
-            <input
+          </Field>
+          <Field label="Email" htmlFor="user-email" required>
+            <Input
+              id="user-email"
               type="email"
               required
               disabled={Boolean(editingId)}
               value={form.email}
               onChange={(event) => setForm({ ...form, email: event.target.value })}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"
             />
-          </div>
+          </Field>
           {!editingId && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Password</label>
-              <input
+            <Field label="Password" htmlFor="user-password" required>
+              <Input
+                id="user-password"
                 type="password"
                 required
                 minLength={8}
                 value={form.password}
                 onChange={(event) => setForm({ ...form, password: event.target.value })}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
               />
-            </div>
+            </Field>
           )}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Designation</label>
-            <input
+          <Field label="Designation" htmlFor="user-designation">
+            <Input
+              id="user-designation"
               value={form.designation}
               onChange={(event) => setForm({ ...form, designation: event.target.value })}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Role</label>
-            <select
-              value={form.role}
-              onChange={(event) => setForm({ ...form, role: event.target.value })}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
-            >
+          </Field>
+          <Field label="Role" htmlFor="user-role">
+            <Select id="user-role" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}>
               <option value="employee">Employee</option>
               <option value="manager">Manager</option>
               <option value="admin">Admin</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Department</label>
-            <select
+            </Select>
+          </Field>
+          <Field label="Department" htmlFor="user-department">
+            <Select
+              id="user-department"
               value={form.departmentId}
               onChange={(event) => setForm({ ...form, departmentId: event.target.value })}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
             >
               <option value="">None</option>
               {departments.map((department) => (
@@ -254,81 +249,81 @@ function UsersSection() {
                   {department.status !== 'active' ? ' (inactive)' : ''}
                 </option>
               ))}
-            </select>
-          </div>
+            </Select>
+          </Field>
           <div className="flex gap-2">
-            <button
-              type="submit"
-              className="rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
-            >
+            <Button type="submit" variant="primary" size="sm">
               {editingId ? 'Save' : 'Create'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowForm(false)}
-              className="rounded bg-gray-200 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-300"
-            >
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setShowForm(false)}>
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       )}
 
-      <table className="mt-4 w-full text-left text-sm">
-        <thead>
-          <tr className="border-b border-gray-200 text-gray-500">
-            <th className="py-2">Name</th>
-            <th className="py-2">Email</th>
-            <th className="py-2">Role</th>
-            <th className="py-2">Department</th>
-            <th className="py-2">Status</th>
-            <th className="py-2">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading ? (
-            <tr>
-              <td colSpan="6" className="py-4 text-gray-500">
-                Loading...
-              </td>
-            </tr>
-          ) : users.length === 0 ? (
-            <tr>
-              <td colSpan="6" className="py-4 text-gray-500">
-                No users found.
-              </td>
-            </tr>
-          ) : (
-            users.map((user) => (
-              <tr key={user._id} className="border-b border-gray-100">
-                <td className="py-2">{user.name}</td>
-                <td className="py-2 text-gray-500">{user.email}</td>
-                <td className="py-2">{user.role}</td>
-                <td className="py-2">{departmentName(user.departmentId)}</td>
-                <td className="py-2">
-                  <span className={user.status === 'active' ? 'text-green-600' : 'text-gray-400'}>
-                    {user.status}
-                  </span>
-                </td>
-                <td className="space-x-2 py-2">
-                  <button onClick={() => openEditForm(user)} className="text-blue-600 hover:underline">
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => toggleStatus(user)}
-                    disabled={isSelf(user)}
-                    title={isSelf(user) ? 'You cannot deactivate your own account' : undefined}
-                    className="text-gray-600 hover:underline disabled:cursor-not-allowed disabled:text-gray-300 disabled:no-underline"
-                  >
-                    {user.status === 'active' ? 'Deactivate' : 'Activate'}
-                  </button>
+      <div className="mt-4">
+        <Table>
+          <THead>
+            <Th>Name</Th>
+            <Th>Email</Th>
+            <Th>Role</Th>
+            <Th>Department</Th>
+            <Th>Status</Th>
+            <Th>Actions</Th>
+          </THead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan="6" className="px-4 py-6">
+                  <LoadingSpinner label="Loading..." />
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </section>
+            ) : users.length === 0 ? (
+              <tr>
+                <td colSpan="6">
+                  <EmptyState title="No users found" />
+                </td>
+              </tr>
+            ) : (
+              users.map((user) => (
+                <Tr key={user._id}>
+                  <Td className="font-medium text-stone-800">{user.name}</Td>
+                  <Td className="text-stone-500">{user.email}</Td>
+                  <Td className="capitalize">{user.role}</Td>
+                  <Td>{departmentName(user.departmentId)}</Td>
+                  <Td>
+                    <span
+                      className={`inline-flex items-center gap-1.5 text-sm font-medium ${
+                        user.status === 'active' ? 'text-emerald-700' : 'text-stone-400'
+                      }`}
+                    >
+                      <span className={`h-2 w-2 rounded-full ${user.status === 'active' ? 'bg-emerald-500' : 'bg-stone-300'}`} />
+                      {user.status}
+                    </span>
+                  </Td>
+                  <Td>
+                    <div className="flex gap-3">
+                      <button onClick={() => openEditForm(user)} className="text-sm font-medium text-plum-700 hover:underline">
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => toggleStatus(user)}
+                        disabled={isSelf(user)}
+                        title={isSelf(user) ? 'You cannot deactivate your own account' : undefined}
+                        className="text-sm font-medium text-stone-500 hover:underline disabled:cursor-not-allowed disabled:text-stone-300 disabled:no-underline"
+                      >
+                        {user.status === 'active' ? 'Deactivate' : 'Activate'}
+                      </button>
+                    </div>
+                  </Td>
+                </Tr>
+              ))
+            )}
+          </tbody>
+        </Table>
+      </div>
+    </Card>
   );
 }
 

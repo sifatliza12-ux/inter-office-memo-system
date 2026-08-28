@@ -6,6 +6,15 @@ import {
   updateDepartment,
   updateDepartmentStatus,
 } from '../services/departments';
+import Card from './ui/Card.jsx';
+import Button from './ui/Button.jsx';
+import Select from './ui/Select.jsx';
+import Field from './ui/Field.jsx';
+import Input from './ui/Input.jsx';
+import Textarea from './ui/Textarea.jsx';
+import { Table, THead, Th, Tr, Td } from './ui/Table.jsx';
+import EmptyState from './ui/EmptyState.jsx';
+import LoadingSpinner from './ui/LoadingSpinner.jsx';
 
 const emptyForm = { name: '', description: '' };
 
@@ -78,119 +87,116 @@ function DepartmentsSection() {
   };
 
   return (
-    <section className="rounded-lg bg-white p-6 shadow">
+    <Card as="section">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-800">Departments</h2>
-        <button
-          onClick={openCreateForm}
-          className="rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
-        >
+        <h2 className="text-lg font-semibold text-stone-800">Departments</h2>
+        <Button variant="primary" size="sm" onClick={openCreateForm}>
           New Department
-        </button>
+        </Button>
       </div>
 
       <div className="mt-4 flex items-center gap-2">
-        <label className="text-sm text-gray-600" htmlFor="dept-status-filter">
+        <label className="text-sm text-stone-500" htmlFor="dept-status-filter">
           Status
         </label>
-        <select
+        <Select
           id="dept-status-filter"
           value={statusFilter}
           onChange={(event) => setStatusFilter(event.target.value)}
-          className="rounded border border-gray-300 px-2 py-1 text-sm"
+          className="w-40"
         >
           <option value="">All</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
-        </select>
+        </Select>
       </div>
 
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="mt-4 space-y-3 rounded border border-gray-200 p-4">
+        <form onSubmit={handleSubmit} className="mt-4 space-y-3 rounded-lg border border-stone-200 bg-stone-50/50 p-4">
           {formError && <p className="text-sm text-red-600">{formError}</p>}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Name</label>
-            <input
+          <Field label="Name" htmlFor="dept-name" required>
+            <Input
+              id="dept-name"
               required
               value={form.name}
               onChange={(event) => setForm({ ...form, name: event.target.value })}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Description</label>
-            <textarea
+          </Field>
+          <Field label="Description" htmlFor="dept-description">
+            <Textarea
+              id="dept-description"
               value={form.description}
               onChange={(event) => setForm({ ...form, description: event.target.value })}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
             />
-          </div>
+          </Field>
           <div className="flex gap-2">
-            <button
-              type="submit"
-              className="rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
-            >
+            <Button type="submit" variant="primary" size="sm">
               {editingId ? 'Save' : 'Create'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowForm(false)}
-              className="rounded bg-gray-200 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-300"
-            >
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setShowForm(false)}>
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       )}
 
-      <table className="mt-4 w-full text-left text-sm">
-        <thead>
-          <tr className="border-b border-gray-200 text-gray-500">
-            <th className="py-2">Name</th>
-            <th className="py-2">Description</th>
-            <th className="py-2">Status</th>
-            <th className="py-2">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading ? (
-            <tr>
-              <td colSpan="4" className="py-4 text-gray-500">
-                Loading...
-              </td>
-            </tr>
-          ) : departments.length === 0 ? (
-            <tr>
-              <td colSpan="4" className="py-4 text-gray-500">
-                No departments found.
-              </td>
-            </tr>
-          ) : (
-            departments.map((department) => (
-              <tr key={department._id} className="border-b border-gray-100">
-                <td className="py-2">{department.name}</td>
-                <td className="py-2 text-gray-500">{department.description}</td>
-                <td className="py-2">
-                  <span className={department.status === 'active' ? 'text-green-600' : 'text-gray-400'}>
-                    {department.status}
-                  </span>
-                </td>
-                <td className="space-x-2 py-2">
-                  <button onClick={() => openEditForm(department)} className="text-blue-600 hover:underline">
-                    Edit
-                  </button>
-                  <button onClick={() => toggleStatus(department)} className="text-gray-600 hover:underline">
-                    {department.status === 'active' ? 'Deactivate' : 'Activate'}
-                  </button>
+      <div className="mt-4">
+        <Table>
+          <THead>
+            <Th>Name</Th>
+            <Th>Description</Th>
+            <Th>Status</Th>
+            <Th>Actions</Th>
+          </THead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan="4" className="px-4 py-6">
+                  <LoadingSpinner label="Loading..." />
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </section>
+            ) : departments.length === 0 ? (
+              <tr>
+                <td colSpan="4">
+                  <EmptyState title="No departments found" />
+                </td>
+              </tr>
+            ) : (
+              departments.map((department) => (
+                <Tr key={department._id}>
+                  <Td className="font-medium text-stone-800">{department.name}</Td>
+                  <Td className="text-stone-500">{department.description}</Td>
+                  <Td>
+                    <span
+                      className={`inline-flex items-center gap-1.5 text-sm font-medium ${
+                        department.status === 'active' ? 'text-emerald-700' : 'text-stone-400'
+                      }`}
+                    >
+                      <span
+                        className={`h-2 w-2 rounded-full ${department.status === 'active' ? 'bg-emerald-500' : 'bg-stone-300'}`}
+                      />
+                      {department.status}
+                    </span>
+                  </Td>
+                  <Td>
+                    <div className="flex gap-3">
+                      <button onClick={() => openEditForm(department)} className="text-sm font-medium text-plum-700 hover:underline">
+                        Edit
+                      </button>
+                      <button onClick={() => toggleStatus(department)} className="text-sm font-medium text-stone-500 hover:underline">
+                        {department.status === 'active' ? 'Deactivate' : 'Activate'}
+                      </button>
+                    </div>
+                  </Td>
+                </Tr>
+              ))
+            )}
+          </tbody>
+        </Table>
+      </div>
+    </Card>
   );
 }
 

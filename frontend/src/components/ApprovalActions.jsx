@@ -1,6 +1,9 @@
 import { useState } from 'react';
 
 import { approveMemo, rejectMemo, requestChanges } from '../services/workflow';
+import Card from './ui/Card.jsx';
+import Button from './ui/Button.jsx';
+import Textarea from './ui/Textarea.jsx';
 
 function ApprovalActions({ memoId, onActionComplete }) {
   const [comment, setComment] = useState('');
@@ -22,49 +25,47 @@ function ApprovalActions({ memoId, onActionComplete }) {
   };
 
   return (
-    <div className="rounded border border-blue-200 bg-blue-50 p-4">
-      <p className="text-sm font-medium text-blue-900">It is your turn to act on this memo.</p>
+    <Card className="border-plum-200 bg-plum-50/60">
+      <p className="text-sm font-medium text-plum-900">It is your turn to act on this memo.</p>
 
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
 
-      <div className="mt-2">
-        <label className="block text-sm font-medium text-gray-700">Comment</label>
-        <textarea
+      <div className="mt-3">
+        <label className="mb-1 block text-sm font-medium text-stone-700">Comment</label>
+        <Textarea
           value={comment}
           onChange={(event) => setComment(event.target.value)}
           rows={2}
-          className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
           placeholder="Optional for Approve; required for Reject and Request Changes"
         />
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
-        <button
+        <Button
           type="button"
+          variant="primary"
+          size="sm"
+          className="bg-emerald-600 hover:bg-emerald-700 focus-visible:ring-emerald-300"
           disabled={busy}
           onClick={() => runAction(() => approveMemo(memoId, comment || undefined))}
-          className="rounded bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
         >
           Approve
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="primary"
+          size="sm"
+          className="bg-amber-500 hover:bg-amber-600 focus-visible:ring-amber-300"
           disabled={busy}
           onClick={() => runAction(() => requestChanges(memoId, comment))}
-          className="rounded bg-yellow-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-yellow-700 disabled:opacity-50"
         >
           Request Changes
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => runAction(() => rejectMemo(memoId, comment))}
-          className="rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
-        >
+        </Button>
+        <Button type="button" variant="danger" size="sm" disabled={busy} onClick={() => runAction(() => rejectMemo(memoId, comment))}>
           Reject
-        </button>
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 }
 

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { getComments, createComment } from '../services/comments';
+import Button from './ui/Button.jsx';
+import Textarea from './ui/Textarea.jsx';
+import LoadingSpinner from './ui/LoadingSpinner.jsx';
 
 // General discussion comments — a separate thread from the "Workflow
 // History" timeline above it, which shows the approve/reject/request-changes
@@ -53,23 +56,23 @@ function CommentsSection({ memoId, canComment }) {
 
   return (
     <div>
-      <p className="text-sm font-medium text-gray-700">Comments</p>
+      <p className="text-sm font-medium text-stone-700">Comments</p>
 
       {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
 
-      <div className="mt-1 space-y-2">
+      <div className="mt-2 space-y-2">
         {loading ? (
-          <p className="text-sm text-gray-400">Loading comments...</p>
+          <LoadingSpinner size="sm" label="Loading comments..." className="justify-start" />
         ) : comments.length === 0 ? (
-          <p className="text-sm text-gray-400">No comments yet.</p>
+          <p className="text-sm text-stone-400">No comments yet.</p>
         ) : (
           comments.map((comment) => (
-            <div key={comment._id} className="rounded border border-gray-200 p-3 text-sm">
+            <div key={comment._id} className="rounded-md border border-stone-200 bg-stone-50/60 p-3 text-sm">
               <div className="flex items-center justify-between">
-                <span className="font-medium text-gray-800">{comment.authorId?.name || 'Unknown'}</span>
-                <span className="text-xs text-gray-500">{new Date(comment.createdAt).toLocaleString()}</span>
+                <span className="font-medium text-stone-800">{comment.authorId?.name || 'Unknown'}</span>
+                <span className="text-xs text-stone-400">{new Date(comment.createdAt).toLocaleString()}</span>
               </div>
-              <p className="mt-1 whitespace-pre-wrap text-gray-700">{comment.text}</p>
+              <p className="mt-1 whitespace-pre-wrap text-stone-700">{comment.text}</p>
             </div>
           ))
         )}
@@ -78,20 +81,10 @@ function CommentsSection({ memoId, canComment }) {
       {canComment && (
         <form onSubmit={handleSubmit} className="mt-3 space-y-2">
           {submitError && <p className="text-sm text-red-600">{submitError}</p>}
-          <textarea
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            rows={3}
-            placeholder="Add a comment..."
-            className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
-          />
-          <button
-            type="submit"
-            disabled={busy}
-            className="rounded bg-gray-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-600 disabled:opacity-50"
-          >
+          <Textarea value={text} onChange={(event) => setText(event.target.value)} rows={3} placeholder="Add a comment..." />
+          <Button type="submit" variant="secondary" size="sm" disabled={busy}>
             Post Comment
-          </button>
+          </Button>
         </form>
       )}
     </div>

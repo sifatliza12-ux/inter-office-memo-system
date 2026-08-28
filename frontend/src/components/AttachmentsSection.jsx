@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { getAttachments, uploadAttachment, deleteAttachment, downloadAttachment } from '../services/attachments';
+import LoadingSpinner from './ui/LoadingSpinner.jsx';
 
 const formatSize = (bytes) => {
   if (bytes < 1024) return `${bytes} B`;
@@ -73,32 +74,32 @@ function AttachmentsSection({ memoId, canUpload, currentUserId, isAuthor }) {
 
   return (
     <div>
-      <p className="text-sm font-medium text-gray-700">Attachments</p>
+      <p className="text-sm font-medium text-stone-700">Attachments</p>
 
       {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
 
-      <div className="mt-1 space-y-2">
+      <div className="mt-2 space-y-2">
         {loading ? (
-          <p className="text-sm text-gray-400">Loading attachments...</p>
+          <LoadingSpinner size="sm" label="Loading attachments..." className="justify-start" />
         ) : attachments.length === 0 ? (
-          <p className="text-sm text-gray-400">No attachments yet.</p>
+          <p className="text-sm text-stone-400">No attachments yet.</p>
         ) : (
           attachments.map((attachment) => {
             const canDelete = isAuthor || attachment.uploadedBy?._id === currentUserId;
             return (
               <div
                 key={attachment._id}
-                className="flex items-center justify-between rounded border border-gray-200 p-3 text-sm"
+                className="flex items-center justify-between rounded-md border border-stone-200 bg-stone-50/60 p-3 text-sm"
               >
                 <div>
                   <button
                     type="button"
                     onClick={() => handleDownload(attachment)}
-                    className="font-medium text-blue-600 hover:underline"
+                    className="font-medium text-plum-700 hover:underline"
                   >
                     {attachment.filename}
                   </button>
-                  <p className="mt-0.5 text-xs text-gray-500">
+                  <p className="mt-0.5 text-xs text-stone-400">
                     {formatSize(attachment.size)} &middot; {attachment.uploadedBy?.name || 'Unknown'} &middot;{' '}
                     {new Date(attachment.uploadedAt).toLocaleString()}
                   </p>
@@ -108,7 +109,7 @@ function AttachmentsSection({ memoId, canUpload, currentUserId, isAuthor }) {
                     type="button"
                     onClick={() => handleDelete(attachment)}
                     disabled={busy}
-                    className="text-xs text-red-600 hover:underline disabled:opacity-50"
+                    className="text-xs font-medium text-red-600 hover:underline disabled:opacity-50"
                   >
                     Delete
                   </button>
@@ -122,11 +123,11 @@ function AttachmentsSection({ memoId, canUpload, currentUserId, isAuthor }) {
       {canUpload && (
         <div className="mt-3">
           {uploadError && <p className="mb-1 text-sm text-red-600">{uploadError}</p>}
-          <label className="inline-block cursor-pointer rounded bg-gray-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-600">
+          <label className="inline-flex cursor-pointer items-center rounded-lg bg-plum-800 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-plum-700">
             {busy ? 'Uploading...' : 'Upload File'}
             <input type="file" onChange={handleFileChange} disabled={busy} className="hidden" />
           </label>
-          <p className="mt-1 text-xs text-gray-400">PDF, Word, Excel, PNG, or JPEG — up to 10MB.</p>
+          <p className="mt-1 text-xs text-stone-400">PDF, Word, Excel, PNG, or JPEG — up to 10MB.</p>
         </div>
       )}
     </div>

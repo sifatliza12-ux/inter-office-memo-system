@@ -1,6 +1,10 @@
 import { useState } from 'react';
 
 import { addWorkflowParticipant } from '../services/workflow';
+import Card from './ui/Card.jsx';
+import Button from './ui/Button.jsx';
+import Select from './ui/Select.jsx';
+import Input from './ui/Input.jsx';
 
 function AddParticipantControl({ memoId, users, existingParticipantIds, onActionComplete }) {
   const [userId, setUserId] = useState('');
@@ -34,40 +38,33 @@ function AddParticipantControl({ memoId, users, existingParticipantIds, onAction
   };
 
   return (
-    <form onSubmit={handleSubmit} className="rounded border border-gray-200 p-4">
-      <p className="text-sm font-medium text-gray-700">Add a required participant</p>
+    <Card>
+      <form onSubmit={handleSubmit}>
+        <p className="text-sm font-medium text-stone-700">Add a required participant</p>
 
-      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
 
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <select
-          value={userId}
-          onChange={(event) => setUserId(event.target.value)}
-          className="rounded border border-gray-300 px-2 py-1.5 text-sm"
-        >
-          <option value="">Select a user...</option>
-          {candidates.map((user) => (
-            <option key={user._id} value={user._id}>
-              {user.name} ({user.email})
-            </option>
-          ))}
-        </select>
-        <input
-          required
-          placeholder="Reason (required)"
-          value={reason}
-          onChange={(event) => setReason(event.target.value)}
-          className="min-w-[12rem] flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm"
-        />
-        <button
-          type="submit"
-          disabled={busy}
-          className="rounded bg-gray-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-600 disabled:opacity-50"
-        >
-          Add
-        </button>
-      </div>
-    </form>
+        <div className="mt-3 space-y-2">
+          <Select value={userId} onChange={(event) => setUserId(event.target.value)}>
+            <option value="">Select a user...</option>
+            {candidates.map((user) => (
+              <option key={user._id} value={user._id}>
+                {user.name} ({user.email})
+              </option>
+            ))}
+          </Select>
+          <Input
+            required
+            placeholder="Reason (required)"
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+          />
+          <Button type="submit" variant="secondary" size="sm" disabled={busy} className="w-full">
+            Add
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
 }
 
