@@ -221,6 +221,58 @@ describe('Audit logging: events', () => {
     expect(logs[0].description).toContain(referenceNumber);
   });
 
+  it('logs WORKFLOW_REDIRECTED, WORKFLOW_DECLINED_REDIRECTED, and WORKFLOW_PARTICIPANT_REMOVED (Stage 13c actions, now routed through the shared audit service)', async () => {
+    const org = await createOrganizationWithAdmin(app);
+    const organizationId = org.response.body.organization._id;
+    const authorToken = await loginAs(app, org.payload.adminEmail, org.payload.adminPassword);
+    const { memoId, referenceNumber, participants } = await createSubmittedWorkflow(
+      app,
+      organizationId,
+      authorToken,
+      2
+    );
+    const [current, future] = participants;
+    const { user: nabeel } = await createEmployee(organizationId, { name: 'Nabeel' });
+
+    const redirectResponse = await request(app)
+      .post(`/api/memos/${memoId}/redirect`)
+      .set('Authorization', `Bearer ${current.token}`)
+      .send({ userId: nabeel._id.toString(), comment: 'Nabeel knows this area better' });
+    expect(redirectResponse.status).toBe(200);
+
+    const redirectedLogs = await AuditLog.find({ organizationId, eventType: 'WORKFLOW_REDIRECTED' });
+    expect(redirectedLogs).toHaveLength(1);
+    expect(redirectedLogs[0].description).toContain(referenceNumber);
+    expect(redirectedLogs[0].description).toContain('Nabeel');
+
+    const declineFixture = await createSubmittedWorkflow(app, organizationId, authorToken, 1);
+    const { user: declineTarget } = await createEmployee(organizationId, { name: 'Decline Target' });
+    const declineResponse = await request(app)
+      .post(`/api/memos/${declineFixture.memoId}/decline-redirect`)
+      .set('Authorization', `Bearer ${declineFixture.participants[0].token}`)
+      .send({ userId: declineTarget._id.toString(), comment: 'Not my area of expertise' });
+    expect(declineResponse.status).toBe(200);
+
+    const declinedRedirectedLogs = await AuditLog.find({
+      organizationId,
+      eventType: 'WORKFLOW_DECLINED_REDIRECTED',
+    });
+    expect(declinedRedirectedLogs).toHaveLength(1);
+    expect(declinedRedirectedLogs[0].description).toContain(declineFixture.referenceNumber);
+    expect(declinedRedirectedLogs[0].description).toContain('Decline Target');
+
+    const removeResponse = await request(app)
+      .post(`/api/memos/${memoId}/workflow/remove-participant`)
+      .set('Authorization', `Bearer ${current.token}`)
+      .send({ userId: future.user._id.toString(), reason: 'No longer needed' });
+    expect(removeResponse.status).toBe(200);
+
+    const removedLogs = await AuditLog.find({ organizationId, eventType: 'WORKFLOW_PARTICIPANT_REMOVED' });
+    expect(removedLogs).toHaveLength(1);
+    expect(removedLogs[0].description).toContain('Participant 2');
+    expect(removedLogs[0].description).toContain('No longer needed');
+  });
+
   it('logs ATTACHMENT_UPLOADED and ATTACHMENT_DELETED', async () => {
     const org = await createOrganizationWithAdmin(app);
     const organizationId = org.response.body.organization._id;

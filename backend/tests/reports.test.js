@@ -233,6 +233,62 @@ describe('GET /api/reports', () => {
     expect(noMatch.body.averageWorkflowCompletionTime).toBeNull();
   });
 
+  it('redirectCount and participantRemovalCount count REDIRECTED/DECLINED_REDIRECTED/PARTICIPANT_REMOVED WorkflowActions and respect existing filters', async () => {
+    const org = await createOrganizationWithAdmin(app);
+    const organizationId = org.response.body.organization._id;
+    const adminToken = await loginAs(app, org.payload.adminEmail, org.payload.adminPassword);
+
+    const engineering = await request(app)
+      .post('/api/departments')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Engineering' });
+    const departmentId = engineering.body.department._id;
+
+    // Memo A (Engineering dept): one redirect + one participant removal.
+    // createSubmittedWorkflow's overrides don't forward departmentId (it
+    // only accepts subject/body), so it's set directly via Memo.updateOne,
+    // matching this file's existing pattern for post-hoc field overrides.
+    const fixtureA = await createSubmittedWorkflow(app, organizationId, adminToken, 2);
+    await Memo.updateOne({ _id: fixtureA.memoId }, { $set: { departmentId } });
+    const { user: redirectTarget } = await createEmployee(organizationId, { name: 'Redirect Target' });
+    await request(app)
+      .post(`/api/memos/${fixtureA.memoId}/redirect`)
+      .set('Authorization', `Bearer ${fixtureA.participants[0].token}`)
+      .send({ userId: redirectTarget._id.toString(), comment: 'Routing elsewhere' });
+    await request(app)
+      .post(`/api/memos/${fixtureA.memoId}/workflow/remove-participant`)
+      .set('Authorization', `Bearer ${fixtureA.participants[0].token}`)
+      .send({ userId: fixtureA.participants[1].user._id.toString(), reason: 'Not needed' });
+
+    // Memo B (no department): one decline-redirect.
+    const fixtureB = await createSubmittedWorkflow(app, organizationId, adminToken, 1);
+    const { user: declineTarget } = await createEmployee(organizationId, { name: 'Decline Target' });
+    await request(app)
+      .post(`/api/memos/${fixtureB.memoId}/decline-redirect`)
+      .set('Authorization', `Bearer ${fixtureB.participants[0].token}`)
+      .send({ userId: declineTarget._id.toString(), comment: 'Wrong person' });
+
+    const unfiltered = await request(app).get('/api/reports').set('Authorization', `Bearer ${adminToken}`);
+    expect(unfiltered.status).toBe(200);
+    expect(unfiltered.body.redirectCount).toBe(2); // 1 REDIRECTED + 1 DECLINED_REDIRECTED
+    expect(unfiltered.body.participantRemovalCount).toBe(1);
+
+    const byDepartment = await request(app)
+      .get(`/api/reports?department=${departmentId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(byDepartment.status).toBe(200);
+    expect(byDepartment.body.redirectCount).toBe(1); // only memo A's REDIRECTED
+    expect(byDepartment.body.participantRemovalCount).toBe(1);
+
+    const future = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    const excludeAll = await request(app)
+      .get(`/api/reports?dateFrom=${future}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(excludeAll.status).toBe(200);
+    expect(excludeAll.body.redirectCount).toBe(0);
+    expect(excludeAll.body.participantRemovalCount).toBe(0);
+  });
+
   it("never returns another organization's data in any report field, even with matching filters", async () => {
     const orgA = await createOrganizationWithAdmin(app, { name: 'Report Org A' });
     const orgATokenAdmin = await loginAs(app, orgA.payload.adminEmail, orgA.payload.adminPassword);

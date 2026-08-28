@@ -1,5 +1,6 @@
 const Memo = require('../models/Memo');
 const WorkflowStep = require('../models/WorkflowStep');
+const WorkflowAction = require('../models/WorkflowAction');
 const Department = require('../models/Department');
 const { zeroFilledStatusCounts, toObjectId } = require('./dashboard.service');
 
@@ -113,10 +114,24 @@ const getOrganizationReport = async (organizationId, { dateFrom, dateTo, departm
   // directly, not memos, is what makes this counter measure how often
   // changes were requested rather than how many memos are currently
   // sitting in that status (that's memosByStatus.changes_requested).
-  const changeRequestCount = await WorkflowStep.countDocuments({
-    memoId: { $in: matchingMemoIds },
-    status: 'changes_requested',
-  });
+  // Stage 13e: WorkflowAction counts, scoped by the same matchingMemoIds
+  // idiom as changeRequestCount above — a redirect and a decline-redirect
+  // are both "the memo got routed somewhere other than the normal next
+  // step," so they're counted together under one metric.
+  const [changeRequestCount, redirectCount, participantRemovalCount] = await Promise.all([
+    WorkflowStep.countDocuments({
+      memoId: { $in: matchingMemoIds },
+      status: 'changes_requested',
+    }),
+    WorkflowAction.countDocuments({
+      memoId: { $in: matchingMemoIds },
+      action: { $in: ['REDIRECTED', 'DECLINED_REDIRECTED'] },
+    }),
+    WorkflowAction.countDocuments({
+      memoId: { $in: matchingMemoIds },
+      action: 'PARTICIPANT_REMOVED',
+    }),
+  ]);
 
   const departmentNameById = new Map(departments.map((dept) => [dept._id.toString(), dept.name]));
   const memosByDepartment = departmentRows.map((row) => ({
@@ -136,6 +151,8 @@ const getOrganizationReport = async (organizationId, { dateFrom, dateTo, departm
     rejectedCount,
     changeRequestCount,
     averageWorkflowCompletionTime,
+    redirectCount,
+    participantRemovalCount,
   };
 };
 

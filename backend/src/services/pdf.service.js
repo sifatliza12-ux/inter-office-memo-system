@@ -13,11 +13,20 @@ const STATUS_LABELS = {
   rejected: 'REJECTED',
 };
 
-const WORKFLOW_ACTION_LABELS = {
-  pending: 'Pending',
-  approved: 'Approved',
-  rejected: 'Rejected',
-  changes_requested: 'Changes Requested',
+// Stage 13e: labels for WorkflowAction.action (Stage 13b/13c's more complete
+// event log), replacing the old WorkflowStep-status-based labels below —
+// this now covers REDIRECTED/DECLINED_REDIRECTED/PARTICIPANT_REMOVED, which
+// have no WorkflowStep-only equivalent.
+const WORKFLOW_ACTION_EVENT_LABELS = {
+  MEMO_SUBMITTED: 'Submitted',
+  RESUBMITTED: 'Resubmitted',
+  APPROVED: 'Approved',
+  DECLINED: 'Declined',
+  CHANGES_REQUESTED: 'Changes Requested',
+  REDIRECTED: 'Redirected',
+  DECLINED_REDIRECTED: 'Declined & Redirected',
+  PARTICIPANT_ADDED: 'Participant Added',
+  PARTICIPANT_REMOVED: 'Participant Removed',
 };
 
 const formatDate = (date) => (date ? new Date(date).toLocaleString() : '—');
@@ -42,7 +51,7 @@ const addKeyValue = (doc, key, value) => {
 
 const renderMemoPdf = (
   doc,
-  { memo, organization, department, author, participantNames, workflowSteps, comments, attachments }
+  { memo, organization, department, author, participantNames, workflowActions, comments, attachments }
 ) => {
   doc.fontSize(18).font('Helvetica-Bold').text(organization.name, { align: 'center' });
   doc
@@ -63,6 +72,7 @@ const renderMemoPdf = (
   addKeyValue(doc, 'Priority', memo.priority);
   addKeyValue(doc, 'Date Created', formatDate(memo.createdAt));
   addKeyValue(doc, 'Date Submitted', formatDate(memo.submittedAt));
+  addKeyValue(doc, 'Current Version', memo.currentVersionNumber);
 
   doc.moveDown(0.5);
   doc
@@ -81,16 +91,19 @@ const renderMemoPdf = (
   }
 
   addSectionHeading(doc, 'Approval History');
-  if (workflowSteps.length === 0) {
+  if (workflowActions.length === 0) {
     doc.text('No workflow history.');
   } else {
-    workflowSteps.forEach((step) => {
-      const name = step.userId?.name || 'Unknown user';
-      const action = WORKFLOW_ACTION_LABELS[step.status] || step.status;
-      doc.font('Helvetica-Bold').text(`${name} — ${action}`, { continued: true });
-      doc.font('Helvetica').text(`  (${formatDate(step.actionDate)})`);
-      if (step.comment) {
-        doc.font('Helvetica-Oblique').text(`"${step.comment}"`);
+    workflowActions.forEach((action) => {
+      const name = action.actor?.name || 'Unknown user';
+      const label = WORKFLOW_ACTION_EVENT_LABELS[action.action] || action.action;
+      doc.font('Helvetica-Bold').text(`${name} — ${label}`, { continued: true });
+      doc.font('Helvetica').text(`  (${formatDate(action.createdAt)})`);
+      if (action.recipient?.name) {
+        doc.font('Helvetica').text(`  -> sent to ${action.recipient.name}`);
+      }
+      if (action.comment) {
+        doc.font('Helvetica-Oblique').text(`"${action.comment}"`);
       }
       doc.font('Helvetica').moveDown(0.2);
     });

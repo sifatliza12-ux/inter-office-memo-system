@@ -35,6 +35,8 @@ const STAT_CARDS = [
   { key: 'pendingApprovalsCount', label: 'Pending Approvals', accent: 'text-amber-600' },
   { key: 'rejectedCount', label: 'Rejected', accent: 'text-stone-800' },
   { key: 'changeRequestCount', label: 'Change Requests', accent: 'text-stone-800' },
+  { key: 'redirectCount', label: 'Redirects', accent: 'text-plum-600' },
+  { key: 'participantRemovalCount', label: 'Participants Removed', accent: 'text-stone-800' },
 ];
 
 function Reports() {
@@ -162,7 +164,7 @@ function Reports() {
 
         {report && (
           <div className="animate-fade-in-up space-y-6">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
               {STAT_CARDS.map(({ key, label, accent }) => (
                 <Card key={key} className="text-center">
                   <p className="text-xs text-stone-500">{label}</p>

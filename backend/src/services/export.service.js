@@ -8,21 +8,29 @@ const attachmentService = require('./attachment.service');
 const { generateMemoPdfBuffer } = require('./pdf.service');
 
 // getMemoById runs first and throws 404/403 before any of the reads below
-// ever happen. Each of getWorkflowHistory/listComments/listAttachments then
+// ever happen. Each of getMemoActions/listComments/listAttachments then
 // independently re-verifies that exact same view-authorization rule (author,
 // or any WorkflowStep holder, any status) on its own — matching this
 // codebase's established defense-in-depth convention (no downstream read
 // ever trusts that some earlier check already covered it).
+//
+// Stage 13e: sources "Approval History" from WorkflowAction (Stage 13b/13c's
+// more complete event log) via getMemoActions, not WorkflowStep via
+// getWorkflowHistory — a memo that used redirect/decline-redirect/
+// remove-participant has no faithful representation in WorkflowStep-only
+// data. GET /api/memos/:id/workflow (getWorkflowHistory) is unchanged and
+// still available; this is purely an internal data-source swap for PDF
+// generation.
 const exportMemoPdf = async (organizationId, memoId, requestingUserId) => {
   const memo = await memoService.getMemoById(organizationId, memoId, requestingUserId);
 
-  const [organization, department, author, participantUsers, workflowSteps, comments, attachments] =
+  const [organization, department, author, participantUsers, workflowActions, comments, attachments] =
     await Promise.all([
       Organization.findById(organizationId),
       memo.departmentId ? Department.findById(memo.departmentId) : Promise.resolve(null),
       User.findById(memo.authorId).select('name'),
       User.find({ _id: { $in: memo.workflowParticipants } }).select('name'),
-      workflowService.getWorkflowHistory(organizationId, memoId, requestingUserId),
+      workflowService.getMemoActions(organizationId, memoId, requestingUserId),
       commentService.listComments(organizationId, memoId, requestingUserId),
       attachmentService.listAttachments(organizationId, memoId, requestingUserId),
     ]);
@@ -42,7 +50,7 @@ const exportMemoPdf = async (organizationId, memoId, requestingUserId) => {
     department,
     author,
     participantNames,
-    workflowSteps,
+    workflowActions,
     comments,
     attachments,
   });

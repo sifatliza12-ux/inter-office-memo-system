@@ -190,6 +190,55 @@ describe('Stage 13c: decline-and-redirect', () => {
     const targetViewsMemo = await request(app).get(`/api/memos/${memoId}`).set('Authorization', `Bearer ${targetToken}`);
     expect(targetViewsMemo.status).toBe(200);
   });
+
+  it('bug fix: succeeds (200) instead of a 409 duplicate-key error when current-stepOrder + 10 would collide with an existing (even removed) WorkflowStep, by using insertStepAfter\'s midpoint logic instead of a fixed offset', async () => {
+    const org = await createOrganizationWithAdmin(app);
+    const organizationId = org.response.body.organization._id;
+    const authorToken = await loginAs(app, org.payload.adminEmail, org.payload.adminPassword);
+    // A, B, C, D at stepOrders 10, 20, 30, 40.
+    const { memoId, participants } = await createSubmittedWorkflow(app, organizationId, authorToken, 4);
+    const [a, b, c, d] = participants;
+
+    await request(app).post(`/api/memos/${memoId}/approve`).set('Authorization', `Bearer ${a.token}`).send({});
+    await request(app).post(`/api/memos/${memoId}/approve`).set('Authorization', `Bearer ${b.token}`).send({});
+    // C is now current (stepOrder 30).
+
+    // Remove D (future, pending, stepOrder 40) — its WorkflowStep row is
+    // never deleted, only status-flipped to 'removed', and stays at
+    // stepOrder 40. Under the old fixed-offset code, C's decline-redirect
+    // below would compute 30 + 10 = 40 and collide with this exact row.
+    const removeResponse = await request(app)
+      .post(`/api/memos/${memoId}/workflow/remove-participant`)
+      .set('Authorization', `Bearer ${c.token}`)
+      .send({ userId: d.user._id.toString(), reason: 'No longer needed' });
+    expect(removeResponse.status).toBe(200);
+
+    const { user: farah } = await createEmployee(organizationId, { name: 'Farah' });
+    const declineResponse = await request(app)
+      .post(`/api/memos/${memoId}/decline-redirect`)
+      .set('Authorization', `Bearer ${c.token}`)
+      .send({ userId: farah._id.toString(), comment: 'Not my area of expertise' });
+
+    expect(declineResponse.status).toBe(200);
+    expect(declineResponse.body.memo.currentApproverId).toBe(farah._id.toString());
+    // Midpoint of C's stepOrder (30) and D's still-existing row (40) is 35 —
+    // strictly between the two, so it cannot collide with D's row at 40.
+    expect(declineResponse.body.memo.currentStepOrder).toBe(35);
+    expect(declineResponse.body.workflowStep.stepOrder).toBe(35);
+
+    const steps = await WorkflowStep.find({ memoId }).sort({ stepOrder: 1 });
+    expect(steps.map((step) => ({ stepOrder: step.stepOrder, status: step.status }))).toEqual([
+      { stepOrder: 10, status: 'approved' },
+      { stepOrder: 20, status: 'approved' },
+      { stepOrder: 30, status: 'rejected' },
+      { stepOrder: 35, status: 'pending' },
+      { stepOrder: 40, status: 'removed' },
+    ]);
+
+    const declinedRedirected = await WorkflowAction.findOne({ memoId, action: 'DECLINED_REDIRECTED' });
+    expect(declinedRedirected.recipient.toString()).toBe(farah._id.toString());
+    expect(declinedRedirected.comment).toBe('Not my area of expertise');
+  });
 });
 
 describe('Stage 13c: remove participant', () => {

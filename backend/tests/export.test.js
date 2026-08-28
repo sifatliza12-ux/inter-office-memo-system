@@ -1,6 +1,8 @@
 const request = require('supertest');
 
 const app = require('../src/app');
+const workflowService = require('../src/services/workflow.service');
+const WorkflowAction = require('../src/models/WorkflowAction');
 const { createOrganizationWithAdmin } = require('./helpers');
 const { loginAs, createEmployee, createSubmittedWorkflow } = require('./workflowHelpers');
 
@@ -121,5 +123,73 @@ describe('GET /api/memos/:id/export/pdf', () => {
     expect(response.status).toBe(200);
     expect(isWellFormedPdf(response.body)).toBe(true);
     expect(response.body.length).toBeGreaterThan(500);
+  });
+
+  it('Stage 13e: sources Approval History from WorkflowAction (getMemoActions), not the old WorkflowStep-only getWorkflowHistory', async () => {
+    const org = await createOrganizationWithAdmin(app);
+    const organizationId = org.response.body.organization._id;
+    const authorToken = await loginAs(app, org.payload.adminEmail, org.payload.adminPassword);
+    const { memoId } = await createSubmittedWorkflow(app, organizationId, authorToken, 1);
+
+    const getMemoActionsSpy = jest.spyOn(workflowService, 'getMemoActions');
+    const getWorkflowHistorySpy = jest.spyOn(workflowService, 'getWorkflowHistory');
+
+    const response = await request(app)
+      .get(`/api/memos/${memoId}/export/pdf`)
+      .set('Authorization', `Bearer ${authorToken}`);
+    expect(response.status).toBe(200);
+    expect(isWellFormedPdf(response.body)).toBe(true);
+
+    expect(getMemoActionsSpy).toHaveBeenCalledTimes(1);
+    expect(getWorkflowHistorySpy).not.toHaveBeenCalled();
+
+    getMemoActionsSpy.mockRestore();
+    getWorkflowHistorySpy.mockRestore();
+  });
+
+  it('Stage 13e: exports successfully (200, valid PDF) for a memo that went through remove-participant, redirect, and decline-redirect', async () => {
+    const org = await createOrganizationWithAdmin(app);
+    const organizationId = org.response.body.organization._id;
+    const authorToken = await loginAs(app, org.payload.adminEmail, org.payload.adminPassword);
+    const { memoId, participants } = await createSubmittedWorkflow(app, organizationId, authorToken, 3);
+    const [participantA, participantB, participantC] = participants;
+
+    await request(app).post(`/api/memos/${memoId}/approve`).set('Authorization', `Bearer ${participantA.token}`).send({});
+
+    // Remove C (a not-yet-reached future participant) first — its stepOrder
+    // (30) sits beyond where redirect/decline-redirect will insert new
+    // steps below, so removing it up front avoids any stepOrder collision
+    // with decline-redirect's fixed current+10 insertion (a pre-existing
+    // Stage 13c characteristic, out of scope to change here).
+    await request(app)
+      .post(`/api/memos/${memoId}/workflow/remove-participant`)
+      .set('Authorization', `Bearer ${participantA.token}`)
+      .send({ userId: participantC.user._id.toString(), reason: 'No longer needed' });
+
+    const { user: nabeel, password: nabeelPassword } = await createEmployee(organizationId, { name: 'Nabeel' });
+    const redirectResponse = await request(app)
+      .post(`/api/memos/${memoId}/redirect`)
+      .set('Authorization', `Bearer ${participantB.token}`)
+      .send({ userId: nabeel._id.toString(), comment: 'Nabeel should handle this' });
+    expect(redirectResponse.status).toBe(200);
+
+    const nabeelToken = await loginAs(app, nabeel.email, nabeelPassword);
+    const { user: farah } = await createEmployee(organizationId, { name: 'Farah' });
+    const declineResponse = await request(app)
+      .post(`/api/memos/${memoId}/decline-redirect`)
+      .set('Authorization', `Bearer ${nabeelToken}`)
+      .send({ userId: farah._id.toString(), comment: 'Not my area of expertise' });
+    expect(declineResponse.status).toBe(200);
+
+    const exportResponse = await request(app)
+      .get(`/api/memos/${memoId}/export/pdf`)
+      .set('Authorization', `Bearer ${authorToken}`);
+    expect(exportResponse.status).toBe(200);
+    expect(isWellFormedPdf(exportResponse.body)).toBe(true);
+
+    const actionTypes = await WorkflowAction.find({ memoId }).distinct('action');
+    expect(actionTypes).toEqual(
+      expect.arrayContaining(['MEMO_SUBMITTED', 'APPROVED', 'PARTICIPANT_REMOVED', 'REDIRECTED', 'DECLINED_REDIRECTED'])
+    );
   });
 });

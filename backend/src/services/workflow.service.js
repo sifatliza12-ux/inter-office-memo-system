@@ -425,7 +425,7 @@ const redirectMemo = async (organizationId, id, requestingUserId, { userId, comm
 
   const memo = await findMemoInOrg(organizationId, id);
   const currentStep = await assertIsCurrentApprover(memo, requestingUserId);
-  await assertValidRedirectTarget(memo, organizationId, userId);
+  const target = await assertValidRedirectTarget(memo, organizationId, userId);
 
   // The current handler's own step transitions exactly like a normal
   // approval (same status/actionDate/comment semantics) — this is
@@ -472,6 +472,13 @@ const redirectMemo = async (organizationId, id, requestingUserId, { userId, comm
 
   await notifyAwaitingApproval(memo, userId);
 
+  await logAuditEvent({
+    organizationId,
+    userId: requestingUserId,
+    eventType: 'WORKFLOW_REDIRECTED',
+    description: `Memo ${memo.referenceNumber} ("${memo.subject}") was redirected to ${target.name}: ${comment}`,
+  });
+
   return { memo, workflowStep: newStep };
 };
 
@@ -489,7 +496,7 @@ const declineRedirectMemo = async (organizationId, id, requestingUserId, { userI
 
   const memo = await findMemoInOrg(organizationId, id);
   const currentStep = await assertIsCurrentApprover(memo, requestingUserId);
-  await assertValidRedirectTarget(memo, organizationId, userId);
+  const target = await assertValidRedirectTarget(memo, organizationId, userId);
 
   // WorkflowStep historical compatibility only — marked exactly like a
   // plain rejection, but the memo itself is NOT terminated below (unlike
@@ -499,14 +506,19 @@ const declineRedirectMemo = async (organizationId, id, requestingUserId, { userI
   currentStep.comment = comment;
   await currentStep.save();
 
-  // Fixed current-stepOrder + 10, per spec — not the general midpoint
-  // insertion primitive used by redirect/resubmit/add-participant.
-  const newStep = await WorkflowStep.create({
-    memoId: memo._id,
-    userId,
-    stepOrder: currentStep.stepOrder + STEP_ORDER_INCREMENT,
-    status: 'pending',
-  });
+  // Bug fix (found during Stage 13e verification): this previously used a
+  // fixed current-stepOrder + 10, which could collide with an
+  // already-existing WorkflowStep at that exact stepOrder — of ANY status,
+  // since rows are never deleted, only status-flipped (e.g. 'removed') —
+  // and throw an unhandled MongoDB duplicate-key error (the {memoId,
+  // stepOrder} unique index) instead of succeeding. Now uses the same
+  // insertStepAfter primitive redirect/resubmit/add-participant already
+  // use: it looks at whatever step actually occupies the next-higher
+  // stepOrder (any status) and inserts at the midpoint — or falls back to
+  // the identical current-stepOrder + 10 offset when nothing follows
+  // currentStep at all, which is exactly the old behavior for the one case
+  // where there was genuinely nothing to collide with.
+  const newStep = await insertStepAfter(memo._id, currentStep.stepOrder, userId);
 
   // Live route only — see the identical comment in redirectMemo above.
   memo.workflowParticipants.push(userId);
@@ -526,6 +538,13 @@ const declineRedirectMemo = async (organizationId, id, requestingUserId, { userI
   });
 
   await notifyAwaitingApproval(memo, userId);
+
+  await logAuditEvent({
+    organizationId,
+    userId: requestingUserId,
+    eventType: 'WORKFLOW_DECLINED_REDIRECTED',
+    description: `Memo ${memo.referenceNumber} ("${memo.subject}") was declined and redirected to ${target.name}: ${comment}`,
+  });
 
   return { memo, workflowStep: newStep };
 };
@@ -557,6 +576,8 @@ const removeParticipant = async (organizationId, id, requestingUserId, { userId,
     throw new ApiError(400, "userId is not a participant in this memo's workflow");
   }
 
+  const targetUser = await User.findById(userId).select('name');
+
   // Independently recomputed, not read from the memo.currentApproverId
   // cache — same reasoning as assertIsCurrentApprover above.
   const currentStep = await getCurrentStep(memo._id);
@@ -586,6 +607,13 @@ const removeParticipant = async (organizationId, id, requestingUserId, { userId,
     action: 'PARTICIPANT_REMOVED',
     comment: reason,
     recipient: null,
+  });
+
+  await logAuditEvent({
+    organizationId,
+    userId: requestingUserId,
+    eventType: 'WORKFLOW_PARTICIPANT_REMOVED',
+    description: `${targetUser ? targetUser.name : 'Unknown user'} was removed from the workflow for memo "${memo.subject}" (reason: ${reason})`,
   });
 
   return { memo, workflowStep: targetStep };
