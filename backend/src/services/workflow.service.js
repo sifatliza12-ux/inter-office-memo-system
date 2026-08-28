@@ -390,6 +390,207 @@ const addParticipant = async (organizationId, id, requestingUserId, { userId, re
   return { memo, workflowStep: newStep };
 };
 
+// Shared by redirect/decline-redirect: the target must exist in this org
+// and must not already be reachable through the LIVE route. Deliberately
+// checks workflowParticipants (live), never originalWorkflowParticipants —
+// the original route (Stage 13a) is historical and immutable, and has no
+// bearing on who is currently a valid redirect target.
+const assertValidRedirectTarget = async (memo, organizationId, userId) => {
+  const target = await User.findOne({ _id: userId, organizationId });
+  if (!target) {
+    throw new ApiError(400, 'userId does not belong to your organization');
+  }
+
+  const alreadyLiveParticipant = memo.workflowParticipants.some(
+    (participantId) => participantId.toString() === String(userId)
+  );
+  if (alreadyLiveParticipant) {
+    throw new ApiError(400, "This user is already a participant in this memo's current workflow");
+  }
+
+  return target;
+};
+
+// Stage 13c. Deliberately NOT built on approveMemo() — see the module-level
+// note in the Stage 13c spec: approveMemo() would itself call
+// recordWorkflowAction('APPROVED'), producing the exact duplicate-action
+// problem this function exists to avoid. A redirect is ONE decision
+// ("I approve my step, and I'm routing it to someone specific instead of
+// the normal next person"), recorded as exactly one REDIRECTED action.
+const redirectMemo = async (organizationId, id, requestingUserId, { userId, comment }) => {
+  if (!userId) {
+    throw new ApiError(400, 'userId is required');
+  }
+  assertNonEmptyComment(comment, 'redirect a memo');
+
+  const memo = await findMemoInOrg(organizationId, id);
+  const currentStep = await assertIsCurrentApprover(memo, requestingUserId);
+  await assertValidRedirectTarget(memo, organizationId, userId);
+
+  // The current handler's own step transitions exactly like a normal
+  // approval (same status/actionDate/comment semantics) — this is
+  // WorkflowStep historical compatibility only. It is NOT accompanied by an
+  // APPROVED WorkflowAction; see recordWorkflowAction below.
+  currentStep.status = 'approved';
+  currentStep.actionDate = new Date();
+  currentStep.comment = comment;
+  await currentStep.save();
+
+  // Inserted immediately after the current (now-approved) step, using the
+  // same midpoint-stepOrder primitive Stage 5's add-participant/resubmit
+  // already use. The normal next participant's own step is untouched and
+  // stays in the sequence at its original position — merely no longer the
+  // lowest pending stepOrder, so no longer reachable as "current" unless a
+  // later action routes back to them.
+  const newStep = await insertStepAfter(memo._id, currentStep.stepOrder, userId);
+
+  // Live route only (never originalWorkflowParticipants) — the target is
+  // now genuinely part of the current/remaining route, exactly like
+  // add-participant's existing push. Required for the target to pass
+  // getMemoById's view-authorization check at all (author or a listed
+  // workflowParticipants entry) — without this, the redirect target could
+  // approve/reject via a raw request (that check doesn't consult this
+  // array) but couldn't view the memo through any normal read endpoint.
+  memo.workflowParticipants.push(userId);
+
+  // Recomputes currentApproverId/currentStepOrder/currentStepSince from the
+  // real WorkflowStep data (lowest pending stepOrder), which by
+  // construction is now newStep — the same shared cache-sync primitive
+  // approve/reject/request-changes already use, not duplicated logic.
+  await syncCurrentApproverCache(memo);
+  await memo.save();
+
+  await recordWorkflowAction({
+    memoId: memo._id,
+    organizationId,
+    versionNumber: memo.currentVersionNumber,
+    actor: requestingUserId,
+    action: 'REDIRECTED',
+    comment,
+    recipient: userId,
+  });
+
+  await notifyAwaitingApproval(memo, userId);
+
+  return { memo, workflowStep: newStep };
+};
+
+// Stage 13c. Deliberately NOT built on rejectMemo() — it would terminate
+// the memo (status: 'rejected') and notify the author, neither of which
+// matches decline-and-redirect's semantics (memo stays 'submitted', the
+// new target is notified, not the author). Also, like approveMemo() above,
+// it would independently record a DECLINED WorkflowAction, duplicating the
+// one combined DECLINED_REDIRECTED action this function must produce.
+const declineRedirectMemo = async (organizationId, id, requestingUserId, { userId, comment }) => {
+  if (!userId) {
+    throw new ApiError(400, 'userId is required');
+  }
+  assertNonEmptyComment(comment, 'decline and redirect a memo');
+
+  const memo = await findMemoInOrg(organizationId, id);
+  const currentStep = await assertIsCurrentApprover(memo, requestingUserId);
+  await assertValidRedirectTarget(memo, organizationId, userId);
+
+  // WorkflowStep historical compatibility only — marked exactly like a
+  // plain rejection, but the memo itself is NOT terminated below (unlike
+  // rejectMemo()).
+  currentStep.status = 'rejected';
+  currentStep.actionDate = new Date();
+  currentStep.comment = comment;
+  await currentStep.save();
+
+  // Fixed current-stepOrder + 10, per spec — not the general midpoint
+  // insertion primitive used by redirect/resubmit/add-participant.
+  const newStep = await WorkflowStep.create({
+    memoId: memo._id,
+    userId,
+    stepOrder: currentStep.stepOrder + STEP_ORDER_INCREMENT,
+    status: 'pending',
+  });
+
+  // Live route only — see the identical comment in redirectMemo above.
+  memo.workflowParticipants.push(userId);
+  memo.currentApproverId = newStep.userId;
+  memo.currentStepOrder = newStep.stepOrder;
+  memo.currentStepSince = new Date();
+  await memo.save();
+
+  await recordWorkflowAction({
+    memoId: memo._id,
+    organizationId,
+    versionNumber: memo.currentVersionNumber,
+    actor: requestingUserId,
+    action: 'DECLINED_REDIRECTED',
+    comment,
+    recipient: userId,
+  });
+
+  await notifyAwaitingApproval(memo, userId);
+
+  return { memo, workflowStep: newStep };
+};
+
+// Stage 13c. Removes a not-yet-reached participant from the LIVE route
+// only — originalWorkflowParticipants (Stage 13a) is never touched here or
+// anywhere else outside first submission.
+const removeParticipant = async (organizationId, id, requestingUserId, { userId, reason }) => {
+  if (!userId) {
+    throw new ApiError(400, 'userId is required');
+  }
+  assertNonEmptyComment(reason, 'remove a workflow participant');
+
+  const memo = await findMemoInOrg(organizationId, id);
+
+  if (memo.status !== 'submitted') {
+    throw new ApiError(400, 'Participants can only be removed while a memo is awaiting approval');
+  }
+
+  // Same broadened authorization as add-participant: any user holding SOME
+  // WorkflowStep (any status) on this memo — past, current, or future.
+  const requesterStep = await WorkflowStep.findOne({ memoId: memo._id, userId: requestingUserId });
+  if (!requesterStep) {
+    throw new ApiError(403, 'Only a workflow participant may remove another participant');
+  }
+
+  const targetStep = await WorkflowStep.findOne({ memoId: memo._id, userId });
+  if (!targetStep) {
+    throw new ApiError(400, "userId is not a participant in this memo's workflow");
+  }
+
+  // Independently recomputed, not read from the memo.currentApproverId
+  // cache — same reasoning as assertIsCurrentApprover above.
+  const currentStep = await getCurrentStep(memo._id);
+  if (currentStep && currentStep.userId.toString() === String(userId)) {
+    throw new ApiError(400, 'The current holder cannot be removed — use redirect instead');
+  }
+
+  if (targetStep.status !== 'pending') {
+    throw new ApiError(400, 'Only a participant whose step is still pending can be removed');
+  }
+
+  // Distinct from 'rejected': this participant never acted, the step was
+  // simply cancelled before they were reached.
+  targetStep.status = 'removed';
+  await targetStep.save();
+
+  memo.workflowParticipants = memo.workflowParticipants.filter(
+    (participantId) => participantId.toString() !== String(userId)
+  );
+  await memo.save();
+
+  await recordWorkflowAction({
+    memoId: memo._id,
+    organizationId,
+    versionNumber: memo.currentVersionNumber,
+    actor: requestingUserId,
+    action: 'PARTICIPANT_REMOVED',
+    comment: reason,
+    recipient: null,
+  });
+
+  return { memo, workflowStep: targetStep };
+};
+
 const getWorkflowHistory = async (organizationId, id, requestingUserId) => {
   // Reuses Stage 4's view-authorization exactly (author or any participant,
   // past/present) rather than a separate rule for this endpoint. Unchanged
@@ -413,6 +614,9 @@ module.exports = {
   requestChanges,
   resubmitMemo,
   addParticipant,
+  redirectMemo,
+  declineRedirectMemo,
+  removeParticipant,
   getWorkflowHistory,
   getMemoActions,
 };

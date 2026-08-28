@@ -13,6 +13,16 @@ export const resubmitMemo = (memoId) => api.post(`/memos/${memoId}/resubmit`);
 export const addWorkflowParticipant = (memoId, userId, reason) =>
   api.post(`/memos/${memoId}/workflow/add-participant`, { userId, reason });
 
+// Stage 13c: dynamic workflow actions, alongside the existing approve/
+// reject/request-changes/add-participant above.
+export const redirectMemo = (memoId, userId, comment) => api.post(`/memos/${memoId}/redirect`, { userId, comment });
+
+export const declineRedirectMemo = (memoId, userId, comment) =>
+  api.post(`/memos/${memoId}/decline-redirect`, { userId, comment });
+
+export const removeWorkflowParticipant = (memoId, userId, reason) =>
+  api.post(`/memos/${memoId}/workflow/remove-participant`, { userId, reason });
+
 // Stage 13b: the new general event-log endpoint, separate from
 // getWorkflow above — scaffolding for Stage 13d's unified timeline.
 export const getWorkflowActions = (memoId) => api.get(`/memos/${memoId}/actions`);

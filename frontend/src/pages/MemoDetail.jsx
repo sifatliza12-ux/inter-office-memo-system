@@ -7,6 +7,7 @@ import { getDirectory } from '../services/directory';
 import { useAuth } from '../context/AuthContext.jsx';
 import ApprovalActions from '../components/ApprovalActions.jsx';
 import AddParticipantControl from '../components/AddParticipantControl.jsx';
+import RemoveParticipantControl from '../components/RemoveParticipantControl.jsx';
 import WorkflowTimeline from '../components/WorkflowTimeline.jsx';
 import CommentsSection from '../components/CommentsSection.jsx';
 import AttachmentsSection from '../components/AttachmentsSection.jsx';
@@ -134,6 +135,15 @@ function MemoDetail() {
   const isCurrentApprover = memo.status === 'submitted' && memo.currentApproverId === currentUserId;
   const isAnyParticipant = workflowSteps.some((step) => (step.userId?._id || step.userId) === currentUserId);
   const canAddParticipant = isAnyParticipant && memo.status === 'submitted';
+  // Same visibility rule as canAddParticipant above (Stage 5) — any
+  // WorkflowStep holder, past/current/future. Candidates are restricted to
+  // still-pending, not-yet-reached participants: never the current holder
+  // (redirect handles that case), never someone whose step was already
+  // acted on.
+  const removableCandidates = workflowSteps
+    .filter((step) => step.status === 'pending')
+    .filter((step) => (step.userId?._id || step.userId) !== memo.currentApproverId)
+    .map((step) => ({ _id: step.userId?._id || step.userId, name: step.userId?.name || 'Unknown' }));
   // Matches the backend's comment authorization exactly (author, or anyone
   // with a WorkflowStep regardless of status) — deliberately not the same
   // as canAddParticipant above, which also requires status === 'submitted'.
@@ -236,7 +246,7 @@ function MemoDetail() {
               <ActionLogSection memoId={id} />
             </Card>
 
-            {isCurrentApprover && <ApprovalActions memoId={id} onActionComplete={fetchAll} />}
+            {isCurrentApprover && <ApprovalActions memoId={id} users={directory.users} onActionComplete={fetchAll} />}
 
             {canAddParticipant && (
               <AddParticipantControl
@@ -245,6 +255,10 @@ function MemoDetail() {
                 existingParticipantIds={memo.workflowParticipants}
                 onActionComplete={fetchAll}
               />
+            )}
+
+            {canAddParticipant && (
+              <RemoveParticipantControl memoId={id} candidates={removableCandidates} onActionComplete={fetchAll} />
             )}
 
             {isDraft && isAuthor && (

@@ -21,7 +21,12 @@ const workflowStepSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'approved', 'rejected', 'changes_requested'],
+      // 'removed' (Stage 13c) means this step was cancelled by
+      // remove-participant BEFORE the participant ever acted — distinct
+      // from 'rejected', which means they actively declined. A step is
+      // never deleted, only ever transitioned to a terminal status, so
+      // this always represents genuine history.
+      enum: ['pending', 'approved', 'rejected', 'changes_requested', 'removed'],
       default: 'pending',
     },
     actionDate: {

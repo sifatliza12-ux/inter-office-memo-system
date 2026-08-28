@@ -34,6 +34,12 @@ router.post('/:id/resubmit', workflowController.resubmitMemo);
 router.post('/:id/workflow/add-participant', workflowController.addParticipant);
 router.get('/:id/workflow', workflowController.getWorkflowHistory);
 
+// Stage 13c: new dynamic workflow actions, alongside (not replacing) the
+// existing approve/reject/request-changes/add-participant above.
+router.post('/:id/redirect', workflowController.redirectMemo);
+router.post('/:id/decline-redirect', workflowController.declineRedirectMemo);
+router.post('/:id/workflow/remove-participant', workflowController.removeParticipant);
+
 // Immutable content snapshots (Stage 13a) — read-only, no PATCH/DELETE ever
 // wired up for MemoVersion, by design.
 router.get('/:id/versions', memoController.getMemoVersions);

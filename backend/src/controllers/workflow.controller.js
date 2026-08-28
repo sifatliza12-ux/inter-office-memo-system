@@ -46,6 +46,36 @@ const addParticipant = asyncHandler(async (req, res) => {
   res.status(201).json({ memo, workflowStep });
 });
 
+const redirectMemo = asyncHandler(async (req, res) => {
+  const { memo, workflowStep } = await workflowService.redirectMemo(
+    req.user.organizationId,
+    req.params.id,
+    req.user.id,
+    req.body
+  );
+  res.status(200).json({ memo, workflowStep });
+});
+
+const declineRedirectMemo = asyncHandler(async (req, res) => {
+  const { memo, workflowStep } = await workflowService.declineRedirectMemo(
+    req.user.organizationId,
+    req.params.id,
+    req.user.id,
+    req.body
+  );
+  res.status(200).json({ memo, workflowStep });
+});
+
+const removeParticipant = asyncHandler(async (req, res) => {
+  const { memo, workflowStep } = await workflowService.removeParticipant(
+    req.user.organizationId,
+    req.params.id,
+    req.user.id,
+    req.body
+  );
+  res.status(200).json({ memo, workflowStep });
+});
+
 const getWorkflowHistory = asyncHandler(async (req, res) => {
   const workflowSteps = await workflowService.getWorkflowHistory(
     req.user.organizationId,
@@ -66,6 +96,9 @@ module.exports = {
   requestChanges,
   resubmitMemo,
   addParticipant,
+  redirectMemo,
+  declineRedirectMemo,
+  removeParticipant,
   getWorkflowHistory,
   getMemoActions,
 };

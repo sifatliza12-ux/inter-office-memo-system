@@ -34,13 +34,24 @@ const workflowActionSchema = new Schema(
     },
     // MEMO_SUBMITTED / APPROVED / DECLINED / CHANGES_REQUESTED / RESUBMITTED
     // / PARTICIPANT_ADDED are the events Stage 5/13a already produce via
-    // WorkflowStep. Stage 13c will add REDIRECTED and PARTICIPANT_REMOVED
-    // for actions with no WorkflowStep equivalent at all — not implemented
-    // yet, do not add them early.
+    // WorkflowStep. REDIRECTED / DECLINED_REDIRECTED / PARTICIPANT_REMOVED
+    // (Stage 13c) have no WorkflowStep-only equivalent — each represents
+    // ONE combined semantic decision (e.g. a redirect is never recorded as
+    // both APPROVED and REDIRECTED for the same operation).
     action: {
       type: String,
       required: true,
-      enum: ['MEMO_SUBMITTED', 'APPROVED', 'DECLINED', 'CHANGES_REQUESTED', 'RESUBMITTED', 'PARTICIPANT_ADDED'],
+      enum: [
+        'MEMO_SUBMITTED',
+        'APPROVED',
+        'DECLINED',
+        'CHANGES_REQUESTED',
+        'RESUBMITTED',
+        'PARTICIPANT_ADDED',
+        'REDIRECTED',
+        'DECLINED_REDIRECTED',
+        'PARTICIPANT_REMOVED',
+      ],
     },
     comment: {
       type: String,
