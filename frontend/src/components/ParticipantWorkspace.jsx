@@ -188,23 +188,43 @@ function ParticipantWorkspace({ memo, workflowSteps, directory, currentUserId, c
   // A participant can hold more than one WorkflowStep on the same memo —
   // resubmitMemo() (backend) re-inserts a fresh step for whoever most
   // recently requested changes, so that person keeps their old terminal
-  // step *and* gains a new pending one. Each row is keyed by the step's own
-  // _id (not userId, which would collide across that person's rows) so
-  // React never conflates or drops one of them.
+  // step *and* gains a new pending one. Both documents are real, unrelated
+  // history and neither is touched here — this only groups them for
+  // display, exactly once per person, so the Participant Workspace reads
+  // as "one participant" rather than showing the same name twice.
+  const stepsByUserId = new Map();
   workflowSteps.forEach((step) => {
     const stepUserId = step.userId?._id || step.userId;
-    const isCurrent = currentStep && step._id === currentStep._id;
-    const statusKey = isCurrent ? 'current' : step.status;
+    if (!stepsByUserId.has(stepUserId)) {
+      stepsByUserId.set(stepUserId, []);
+    }
+    stepsByUserId.get(stepUserId).push(step);
+  });
+
+  stepsByUserId.forEach((steps, stepUserId) => {
+    // Which of this person's steps best represents their standing right
+    // now: the current step if one of their steps IS it, otherwise their
+    // most recently (re)created step (highest stepOrder) — e.g. the fresh
+    // 'pending' step a resubmit just gave them, rather than their older,
+    // now-terminal one.
+    const ownCurrentStep = currentStep && steps.some((step) => step._id === currentStep._id) ? currentStep : null;
+    const representativeStep =
+      ownCurrentStep || steps.reduce((latest, step) => (step.stepOrder > latest.stepOrder ? step : latest));
+    const isCurrent = Boolean(ownCurrentStep);
+    const statusKey = isCurrent ? 'current' : representativeStep.status;
     rows.push({
-      rowKey: step._id,
+      rowKey: stepUserId,
       userId: stepUserId,
-      name: step.userId?.name || userMeta(stepUserId)?.name || 'Unknown',
+      name: representativeStep.userId?.name || userMeta(stepUserId)?.name || 'Unknown',
       department: departmentName(stepUserId),
       statusKey,
-      statusLabel: REAL_STATUS_LABEL[statusKey] || step.status,
-      roleLabel: step.roleLabel || null,
+      statusLabel: REAL_STATUS_LABEL[statusKey] || representativeStep.status,
+      // Kept in sync across all of a person's steps by the backend
+      // (setMyRoleLabel updates every step the requester holds), so any of
+      // their steps already carries the same value.
+      roleLabel: representativeStep.roleLabel || null,
       editable: stepUserId === currentUserId,
-      removable: Boolean(canManage) && step.status === 'pending' && !isCurrent,
+      removable: Boolean(canManage) && representativeStep.status === 'pending' && !isCurrent,
     });
   });
 
