@@ -301,6 +301,77 @@ describe('PATCH /api/memos/:id/workflow/role', () => {
     expect(response.body.memo).not.toHaveProperty('roleLabel');
   });
 
+  // Stage 3 visual QA bug: resubmitMemo() re-inserts a fresh WorkflowStep
+  // for whoever most recently requested changes, so that participant ends
+  // up holding TWO WorkflowStep documents on the same memo (their old
+  // 'changes_requested' one, plus a new 'pending' one). Before this fix,
+  // setMyRoleLabel used findOne + a single save(), which silently updated
+  // only whichever of the two Mongo's natural order returned first — so an
+  // edit could appear to do nothing on the step the user was actually
+  // looking at. roleLabel is a per-person descriptor, so every one of the
+  // caller's own steps on this memo must end up with the same value.
+  it('keeps roleLabel in sync across every WorkflowStep the caller holds on the same memo, after a request-changes/resubmit cycle produces two', async () => {
+    const org = await createOrganizationWithAdmin(app);
+    const organizationId = org.response.body.organization._id;
+    const authorToken = await loginAs(app, org.payload.adminEmail, org.payload.adminPassword);
+    const { memoId, participants } = await createSubmittedWorkflow(app, organizationId, authorToken, 1);
+    const [p1] = participants;
+
+    const firstLabelResponse = await request(app)
+      .patch(rolePath(memoId))
+      .set('Authorization', `Bearer ${p1.token}`)
+      .send({ roleLabel: 'First Pass' });
+    expect(firstLabelResponse.status).toBe(200);
+
+    const requestChangesResponse = await request(app)
+      .post(`/api/memos/${memoId}/request-changes`)
+      .set('Authorization', `Bearer ${p1.token}`)
+      .send({ comment: 'Please revise the figures' });
+    expect(requestChangesResponse.status).toBe(200);
+
+    await request(app)
+      .patch(`/api/memos/${memoId}`)
+      .set('Authorization', `Bearer ${authorToken}`)
+      .send({ body: 'Revised body' });
+
+    const resubmitResponse = await request(app)
+      .post(`/api/memos/${memoId}/resubmit`)
+      .set('Authorization', `Bearer ${authorToken}`);
+    expect(resubmitResponse.status).toBe(200);
+
+    const stepsAfterResubmit = await WorkflowStep.find({ memoId, userId: p1.user._id });
+    expect(stepsAfterResubmit).toHaveLength(2);
+
+    const secondLabelResponse = await request(app)
+      .patch(rolePath(memoId))
+      .set('Authorization', `Bearer ${p1.token}`)
+      .send({ roleLabel: 'Second Pass' });
+    expect(secondLabelResponse.status).toBe(200);
+    expect(secondLabelResponse.body.workflowStep.roleLabel).toBe('Second Pass');
+
+    const stepsAfterSecondEdit = await WorkflowStep.find({ memoId, userId: p1.user._id });
+    expect(stepsAfterSecondEdit).toHaveLength(2);
+    expect(stepsAfterSecondEdit.every((step) => step.roleLabel === 'Second Pass')).toBe(true);
+
+    const workflowResponse = await request(app)
+      .get(`/api/memos/${memoId}/workflow`)
+      .set('Authorization', `Bearer ${authorToken}`);
+    const p1Steps = workflowResponse.body.workflowSteps.filter(
+      (step) => (step.userId?._id || step.userId) === p1.user._id.toString()
+    );
+    expect(p1Steps).toHaveLength(2);
+    expect(p1Steps.every((step) => step.roleLabel === 'Second Pass')).toBe(true);
+
+    // Clearing must also apply to every one of the caller's steps, not just one.
+    const clearResponse = await request(app)
+      .patch(rolePath(memoId))
+      .set('Authorization', `Bearer ${p1.token}`)
+      .send({ roleLabel: '' });
+    expect(clearResponse.status).toBe(200);
+    const stepsAfterClear = await WorkflowStep.find({ memoId, userId: p1.user._id });
+    expect(stepsAfterClear.every((step) => !step.roleLabel)).toBe(true);
+  });
+
   it('has no workflow side effects: no WorkflowAction, no notification, memo.status/currentApproverId/stepOrder/originalWorkflowParticipants unchanged, no MemoVersion created', async () => {
     const org = await createOrganizationWithAdmin(app);
     const organizationId = org.response.body.organization._id;

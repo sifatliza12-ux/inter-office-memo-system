@@ -657,24 +657,43 @@ const normalizeRoleLabel = (rawValue) => {
 // current, or future participant may all set their own label at any time.
 // Self-only by construction: the only lookup key is {memoId, userId:
 // requestingUserId}, never any id supplied by the client (see
-// assertNoTargetingFields above). Touches exactly one WorkflowStep field —
-// no WorkflowAction, audit event, notification, or memo mutation of any
+// assertNoTargetingFields above). Touches only the roleLabel field(s) below
+// — no WorkflowAction, audit event, notification, or memo mutation of any
 // kind, unlike every other function in this file.
+//
+// A single participant can hold MORE THAN ONE WorkflowStep on the same memo
+// — resubmitMemo() above deliberately re-inserts a fresh step for whoever
+// most recently requested changes, so that person now has both their old
+// (terminal, e.g. 'changes_requested') step and a new 'pending' one. Bug
+// found during Stage 3 visual QA: this used to be `findOne` + a single
+// `.save()`, which silently picked whichever of that person's steps Mongo's
+// natural order returned first (in practice, their oldest one) — so an edit
+// made from the row the user actually sees (their current/most recent step)
+// could land on a different, older document instead, making the edit look
+// like it silently failed. roleLabel is a per-person descriptor, not a
+// per-step one, so every one of the requester's steps on this memo is kept
+// in sync with the same value.
 const setMyRoleLabel = async (organizationId, id, requestingUserId, body) => {
   assertNoTargetingFields(body);
   const roleLabel = normalizeRoleLabel(body.roleLabel);
 
   const memo = await findMemoInOrg(organizationId, id);
 
-  const workflowStep = await WorkflowStep.findOne({ memoId: memo._id, userId: requestingUserId });
-  if (!workflowStep) {
+  const ownSteps = await WorkflowStep.find({ memoId: memo._id, userId: requestingUserId });
+  if (ownSteps.length === 0) {
     throw new ApiError(404, "You are not a participant in this memo's workflow");
   }
 
-  workflowStep.roleLabel = roleLabel;
-  await workflowStep.save();
+  await WorkflowStep.updateMany(
+    { memoId: memo._id, userId: requestingUserId },
+    { $set: { roleLabel } },
+    { runValidators: true }
+  );
 
-  return workflowStep;
+  // Reflects the value that was just written on every one of the caller's
+  // steps; stepOrder highest = most recently (re)created, i.e. the one most
+  // relevant to what the user was just looking at.
+  return WorkflowStep.findOne({ memoId: memo._id, userId: requestingUserId }).sort({ stepOrder: -1 });
 };
 
 const getWorkflowHistory = async (organizationId, id, requestingUserId) => {

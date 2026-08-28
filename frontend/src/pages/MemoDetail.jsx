@@ -330,7 +330,13 @@ function MemoDetail() {
             />
           </div>
 
-          <Card padded={false} className="order-6 lg:order-none lg:col-span-2 lg:row-start-2">
+          {/* lg:self-start: without it, CSS Grid's default align-items:
+              stretch forces this card to match the height of its row-mate
+              (Workflow, in the right column) — a compact attachments list
+              would otherwise be stretched into a mostly-empty card. Sizing
+              to its own content instead is what makes this read as a
+              compact supporting section rather than a major content block. */}
+          <Card padded={false} className="order-6 self-start lg:order-none lg:col-span-2 lg:row-start-2">
             <div className="px-5 py-4 sm:px-6">
               <AttachmentsSection memoId={id} canUpload={canComment} currentUserId={currentUserId} isAuthor={isAuthor} />
             </div>

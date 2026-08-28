@@ -174,6 +174,7 @@ function ParticipantWorkspace({ memo, workflowSteps, directory, currentUserId, c
   const rows = [];
   if (!authorHasOwnStep) {
     rows.push({
+      rowKey: 'author',
       userId: memo.authorId,
       name: userMeta(memo.authorId)?.name || 'Unknown',
       department: departmentName(memo.authorId),
@@ -184,11 +185,18 @@ function ParticipantWorkspace({ memo, workflowSteps, directory, currentUserId, c
       removable: false,
     });
   }
+  // A participant can hold more than one WorkflowStep on the same memo —
+  // resubmitMemo() (backend) re-inserts a fresh step for whoever most
+  // recently requested changes, so that person keeps their old terminal
+  // step *and* gains a new pending one. Each row is keyed by the step's own
+  // _id (not userId, which would collide across that person's rows) so
+  // React never conflates or drops one of them.
   workflowSteps.forEach((step) => {
     const stepUserId = step.userId?._id || step.userId;
     const isCurrent = currentStep && step._id === currentStep._id;
     const statusKey = isCurrent ? 'current' : step.status;
     rows.push({
+      rowKey: step._id,
       userId: stepUserId,
       name: step.userId?.name || userMeta(stepUserId)?.name || 'Unknown',
       department: departmentName(stepUserId),
@@ -344,7 +352,7 @@ function ParticipantWorkspace({ memo, workflowSteps, directory, currentUserId, c
       <ul className="divide-y divide-stone-100">
         {rows.map((row) => (
           <ParticipantRow
-            key={row.userId}
+            key={row.rowKey}
             row={row}
             onEditRole={startEditRole}
             onStartRemove={startRemove}
