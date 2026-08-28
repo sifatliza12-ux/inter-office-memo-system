@@ -1,17 +1,18 @@
-const fs = require('fs');
-const path = require('path');
-
-// Set at module top level — setupFilesAfterEnv modules run before the test
-// file itself is required, so this is in place before anything requires
-// ../src/app (and transitively attachment.service.js) for the first time.
-// Points the test suite at its own throwaway directory, isolated from the
-// real backend/uploads/ a dev server might be concurrently writing to —
-// without this, this file's own afterAll cleanup below would delete that
-// shared directory out from under a running dev server (this happened in
-// practice: a persistent local dev server started earlier in the session
-// hit ENOENT after a later `npm test` run silently removed uploads/ from
-// underneath it).
-process.env.UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads-test');
+// Global for every test file (setupFilesAfterEnv runs before a test file's
+// own requires) — any test that ends up exercising attachment.service.js,
+// directly or as a side effect of building a fixture (e.g. Stage 11's PDF
+// export tests uploading an attachment), gets this mock automatically
+// rather than needing to remember to register it per-file. See
+// supabaseStorageMock.js for the actual fake; attachments.test.js still
+// requires it directly to inspect/reset call history between its own tests.
+jest.mock('../src/config/supabaseClient', () => {
+  // eslint-disable-next-line global-require
+  const mockStorage = require('./supabaseStorageMock');
+  return {
+    getSupabaseClient: () => mockStorage.client,
+    SUPABASE_BUCKET: 'test-bucket',
+  };
+});
 
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const mongoose = require('mongoose');
@@ -38,11 +39,7 @@ afterAll(async () => {
   if (mongod) {
     await mongod.stop();
   }
-
-  // attachment.service.js writes real files to disk (deliberately not
-  // mocked, so upload/download tests exercise the real filesystem path) —
-  // the in-memory Mongo teardown above has no effect on those. Without
-  // this, every test run leaves orphaned files behind. Only ever removes
-  // the isolated UPLOADS_DIR set above — never the real backend/uploads/.
-  fs.rmSync(process.env.UPLOADS_DIR, { recursive: true, force: true });
+  // No filesystem cleanup needed as of Stage 8b — attachments now go
+  // through a mocked Supabase Storage client (see tests/supabaseStorageMock.js),
+  // never the real filesystem, so there's nothing left behind to remove.
 });

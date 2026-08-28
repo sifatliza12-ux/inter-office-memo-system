@@ -21,10 +21,12 @@ const attachmentSchema = new Schema(
       required: true,
       trim: true,
     },
-    // Random, server-generated filename the file is actually stored under
-    // on disk (uploads/<storedFilename>) — never derived from user input,
-    // so it can't be used for path traversal or to collide with another
-    // upload.
+    // Full Supabase Storage object key the file actually lives under
+    // ({organizationId}/{memoId}/{randomizedName}, Stage 8b) — never
+    // derived from user input, so it can't be used for path traversal or
+    // to collide with another upload. Formerly a local disk filename
+    // (Stage 8); the field wasn't renamed since its role — the opaque
+    // server-side storage locator, never exposed to clients — is unchanged.
     storedFilename: {
       type: String,
       required: true,

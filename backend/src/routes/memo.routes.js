@@ -42,9 +42,9 @@ router.get('/:id/export/pdf', exportController.exportMemoPdf);
 router.post('/:id/comments', commentController.createComment);
 router.get('/:id/comments', commentController.listComments);
 
-// Attachments — stored on local disk under backend/uploads/ (gitignored),
+// Attachments — stored in a private Supabase Storage bucket (Stage 8b),
 // never as static/public files; only ever served through the authorized
-// download endpoint below.
+// download endpoint below, which proxies the bytes server-side.
 router.post('/:id/attachments', uploadSingleFile, attachmentController.uploadAttachment);
 router.get('/:id/attachments', attachmentController.listAttachments);
 router.get('/:id/attachments/:attachmentId/download', attachmentController.downloadAttachment);

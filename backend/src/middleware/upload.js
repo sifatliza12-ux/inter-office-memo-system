@@ -8,10 +8,10 @@ const ApiError = require('../utils/ApiError');
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_FILE_SIZE_MB = 10;
 
-// Memory storage, not disk storage: the file only ever gets written to
-// uploads/ after attachment.service.js has validated its actual content
+// Memory storage: the file only ever gets uploaded to Supabase Storage
+// (Stage 8b) after attachment.service.js has validated its actual content
 // (magic bytes), not just its extension/declared Content-Type. An invalid
-// upload never touches disk at all.
+// upload never leaves this process, let alone reaches storage.
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_FILE_SIZE_BYTES },

@@ -1,4 +1,3 @@
-const fs = require('fs');
 const request = require('supertest');
 
 const app = require('../src/app');
@@ -7,9 +6,21 @@ const Attachment = require('../src/models/Attachment');
 const { createOrganizationWithAdmin } = require('./helpers');
 const { loginAs, createEmployee, createSubmittedWorkflow } = require('./workflowHelpers');
 
+// Stage 8b: attachments now go through Supabase Storage instead of local
+// disk. tests/setup.js registers a global jest.mock for
+// src/config/supabaseClient (a real in-memory upload/download/remove round
+// trip, not just "doesn't throw" — see supabaseStorageMock.js) so this
+// suite runs without any real network call; required directly here only to
+// inspect/reset its call history between tests.
+const supabaseMock = require('./supabaseStorageMock');
+
 const PDF_BUFFER = Buffer.from('%PDF-1.4\n%mock pdf content for testing\n%%EOF');
 const PNG_BUFFER = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x01, 0x02, 0x03]);
 const OVERSIZED_BUFFER = Buffer.concat([PDF_BUFFER, Buffer.alloc(11 * 1024 * 1024)]);
+
+beforeEach(() => {
+  supabaseMock.reset();
+});
 
 describe('Attachments: POST/GET /api/memos/:id/attachments', () => {
   it('allows the author and any participant to upload; rejects an uninvolved same-org user (403) and another org (404)', async () => {
@@ -55,6 +66,35 @@ describe('Attachments: POST/GET /api/memos/:id/attachments', () => {
       .set('Authorization', `Bearer ${authorToken}`);
     expect(list.status).toBe(200);
     expect(list.body.attachments).toHaveLength(2);
+
+    // The bystander/cross-org attempts were rejected before ever reaching
+    // Supabase — only the two legitimate uploads actually called it.
+    expect(supabaseMock.upload).toHaveBeenCalledTimes(2);
+  });
+
+  it('uploads the buffer to Supabase Storage under {organizationId}/{memoId}/{storedFilename} and persists that full path as storedFilename', async () => {
+    const org = await createOrganizationWithAdmin(app);
+    const organizationId = org.response.body.organization._id;
+    const authorToken = await loginAs(app, org.payload.adminEmail, org.payload.adminPassword);
+    const { memoId } = await createSubmittedWorkflow(app, organizationId, authorToken, 1);
+
+    const response = await request(app)
+      .post(`/api/memos/${memoId}/attachments`)
+      .set('Authorization', `Bearer ${authorToken}`)
+      .attach('file', PDF_BUFFER, 'metadata-check.pdf');
+    expect(response.status).toBe(201);
+
+    const storedInDb = await Attachment.findById(response.body.attachment._id);
+    expect(storedInDb.storedFilename.startsWith(`${organizationId}/${memoId}/`)).toBe(true);
+    expect(storedInDb.filename).toBe('metadata-check.pdf');
+    expect(storedInDb.size).toBe(PDF_BUFFER.length);
+    expect(storedInDb.mimetype).toBe('application/pdf');
+
+    expect(supabaseMock.upload).toHaveBeenCalledTimes(1);
+    const [calledBucket, calledPath, calledBuffer] = supabaseMock.upload.mock.calls[0];
+    expect(calledBucket).toBe('test-bucket');
+    expect(calledPath).toBe(storedInDb.storedFilename);
+    expect(Buffer.compare(calledBuffer, PDF_BUFFER)).toBe(0);
   });
 
   it('rejects an oversized file', async () => {
@@ -70,6 +110,9 @@ describe('Attachments: POST/GET /api/memos/:id/attachments', () => {
 
     expect(response.status).toBe(400);
     expect(response.body.message).toMatch(/size/i);
+    // Rejected by multer before attachment.service.js ever runs — storage
+    // was never touched.
+    expect(supabaseMock.upload).not.toHaveBeenCalled();
   }, 20000);
 
   it('rejects a disallowed file extension', async () => {
@@ -85,6 +128,7 @@ describe('Attachments: POST/GET /api/memos/:id/attachments', () => {
 
     expect(response.status).toBe(400);
     expect(response.body.message).toMatch(/not allowed/i);
+    expect(supabaseMock.upload).not.toHaveBeenCalled();
   });
 
   it("rejects a file whose actual content doesn't match its claimed extension (magic-byte check, not just extension)", async () => {
@@ -106,6 +150,7 @@ describe('Attachments: POST/GET /api/memos/:id/attachments', () => {
 
     const attachmentsInDb = await Attachment.find({ memoId });
     expect(attachmentsInDb).toHaveLength(0);
+    expect(supabaseMock.upload).not.toHaveBeenCalled();
   });
 
   it('returns filename, size, uploader name, and date, in chronological order', async () => {
@@ -132,6 +177,9 @@ describe('Attachments: POST/GET /api/memos/:id/attachments', () => {
     expect(response.body.attachments[1].uploadedBy.name).toBe('Participant 1');
     expect(response.body.attachments[0].size).toBe(PDF_BUFFER.length);
     expect(typeof response.body.attachments[0].uploadedAt).toBe('string');
+    // storedFilename (the raw Supabase Storage key) is still never exposed
+    // in the list response — unaffected by the Stage 8b storage change.
+    expect(response.body.attachments[0].storedFilename).toBeUndefined();
   });
 
   it('does not change memo status when uploading', async () => {
@@ -147,36 +195,6 @@ describe('Attachments: POST/GET /api/memos/:id/attachments', () => {
 
     const memo = await Memo.findById(memoId);
     expect(memo.status).toBe('submitted');
-  });
-
-  it('recovers automatically if the uploads directory is removed after the process started (self-healing, not just created once at startup)', async () => {
-    const org = await createOrganizationWithAdmin(app);
-    const organizationId = org.response.body.organization._id;
-    const authorToken = await loginAs(app, org.payload.adminEmail, org.payload.adminPassword);
-    const { memoId } = await createSubmittedWorkflow(app, organizationId, authorToken, 1);
-
-    // Simulate exactly what happened in practice: something removes the
-    // uploads directory well after attachment.service.js already ran its
-    // once-at-module-load mkdirSync. Without a re-check immediately before
-    // each write, the next upload would fail with ENOENT.
-    const uploadsDir = process.env.UPLOADS_DIR;
-    fs.rmSync(uploadsDir, { recursive: true, force: true });
-    expect(fs.existsSync(uploadsDir)).toBe(false);
-
-    const response = await request(app)
-      .post(`/api/memos/${memoId}/attachments`)
-      .set('Authorization', `Bearer ${authorToken}`)
-      .attach('file', PDF_BUFFER, 'recovers.pdf');
-
-    expect(response.status).toBe(201);
-    expect(fs.existsSync(uploadsDir)).toBe(true);
-
-    // And it's genuinely readable back, not just reported as created.
-    const download = await request(app)
-      .get(`/api/memos/${memoId}/attachments/${response.body.attachment._id}/download`)
-      .set('Authorization', `Bearer ${authorToken}`);
-    expect(download.status).toBe(200);
-    expect(Buffer.compare(download.body, PDF_BUFFER)).toBe(0);
   });
 });
 
@@ -214,6 +232,13 @@ describe('Attachments: GET /api/memos/:id/attachments/:attachmentId/download', (
       .get(`/api/memos/${memoId}/attachments/${attachmentId}/download`)
       .set('Authorization', `Bearer ${tokenB}`);
     expect(crossOrgDownload.status).toBe(404);
+
+    // The upload above is the only call that should have touched storage's
+    // download path; the 403 and 404 attempts must both have been rejected
+    // by assertCanAccessAttachments/findMemoInOrg BEFORE ever reaching
+    // Supabase — authorization gates access to storage, not the other way
+    // around.
+    expect(supabaseMock.download).toHaveBeenCalledTimes(1);
   });
 
   it('cannot be reached by guessing an attachment id that belongs to a different memo', async () => {
@@ -236,9 +261,10 @@ describe('Attachments: GET /api/memos/:id/attachments/:attachmentId/download', (
       .get(`/api/memos/${workflowB.memoId}/attachments/${attachmentIdFromA}/download`)
       .set('Authorization', `Bearer ${authorToken}`);
     expect(crossMemoAttempt.status).toBe(404);
+    expect(supabaseMock.download).not.toHaveBeenCalled();
   });
 
-  it('cannot be reached by requesting the storedFilename directly — uploads/ is never served as a static/public path', async () => {
+  it('cannot be reached by requesting the storedFilename/storage key directly through this app — never served as a static/public path', async () => {
     const org = await createOrganizationWithAdmin(app);
     const organizationId = org.response.body.organization._id;
     const authorToken = await loginAs(app, org.payload.adminEmail, org.payload.adminPassword);
@@ -257,9 +283,12 @@ describe('Attachments: GET /api/memos/:id/attachments/:attachmentId/download', (
       .set('Authorization', `Bearer ${authorToken}`);
     expect(legitimateDownload.status).toBe(200);
 
-    // But a request for the exact same file by its on-disk name — the
-    // "obvious" thing to try if you already know it, e.g. from the list
-    // response above — must not work by any path, authenticated or not.
+    // But a request for the exact same object by its raw storage key —
+    // the "obvious" thing to try if you already know it, e.g. from the
+    // list response above — must not work by any path through THIS app,
+    // authenticated or not. (The Supabase bucket itself being private is
+    // a separate, infrastructure-level guarantee — see the Stage 8b
+    // report's manual-verification note.)
     const attemptedPaths = [
       `/uploads/${storedFilename}`,
       `/api/uploads/${storedFilename}`,
@@ -287,12 +316,14 @@ describe('Attachments: DELETE /api/memos/:id/attachments/:attachmentId', () => {
       .set('Authorization', `Bearer ${participants[0].token}`)
       .attach('file', PDF_BUFFER, 'p1-doc.pdf');
     const attachmentId = upload.body.attachment._id;
+    const { storedFilename } = upload.body.attachment;
 
     // A different participant (not the uploader, not the author) — 403.
     const wrongParticipantAttempt = await request(app)
       .delete(`/api/memos/${memoId}/attachments/${attachmentId}`)
       .set('Authorization', `Bearer ${participants[1].token}`);
     expect(wrongParticipantAttempt.status).toBe(403);
+    expect(supabaseMock.remove).not.toHaveBeenCalled();
 
     // The author (not the uploader) — allowed.
     const authorDelete = await request(app)
@@ -302,6 +333,13 @@ describe('Attachments: DELETE /api/memos/:id/attachments/:attachmentId', () => {
 
     const remaining = await Attachment.find({ memoId });
     expect(remaining).toHaveLength(0);
+
+    // The DB record is gone AND the storage object was removed.
+    expect(supabaseMock.remove).toHaveBeenCalledTimes(1);
+    const [calledBucket, calledPaths] = supabaseMock.remove.mock.calls[0];
+    expect(calledBucket).toBe('test-bucket');
+    expect(calledPaths).toEqual([storedFilename]);
+    expect(supabaseMock.objects.has(`test-bucket::${storedFilename}`)).toBe(false);
 
     // The uploader may delete their own upload too.
     const secondUpload = await request(app)
@@ -314,6 +352,7 @@ describe('Attachments: DELETE /api/memos/:id/attachments/:attachmentId', () => {
       .delete(`/api/memos/${memoId}/attachments/${secondAttachmentId}`)
       .set('Authorization', `Bearer ${participants[0].token}`);
     expect(uploaderDelete.status).toBe(204);
+    expect(supabaseMock.remove).toHaveBeenCalledTimes(2);
   });
 
   it('does not change memo status when deleting', async () => {

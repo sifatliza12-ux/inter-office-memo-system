@@ -1,5 +1,4 @@
 node_modules/
 .env
 *.log
-uploads/
-uploads-test/
+.mongo-data/

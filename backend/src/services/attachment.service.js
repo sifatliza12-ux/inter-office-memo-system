@@ -1,4 +1,3 @@
-const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
@@ -7,14 +6,7 @@ const Memo = require('../models/Memo');
 const WorkflowStep = require('../models/WorkflowStep');
 const ApiError = require('../utils/ApiError');
 const { logAuditEvent } = require('./audit.service');
-
-// Overridable so the test suite can point this at its own throwaway
-// directory instead of the real backend/uploads/ — otherwise the test
-// suite's own cleanup (tests/setup.js) would delete the same directory a
-// concurrently running dev server writes into, which is exactly what caused
-// an ENOENT there in practice.
-const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, '..', '..', 'uploads');
-fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+const { getSupabaseClient, SUPABASE_BUCKET } = require('../config/supabaseClient');
 
 // Each allowed extension maps to the mimetype we record and the magic-byte
 // signature its actual file content must start with — the client-supplied
@@ -66,7 +58,8 @@ const findMemoInOrg = async (organizationId, id) => {
 
 // Same rule as Stage 7's comments: the author, or anyone holding ANY
 // WorkflowStep on this memo regardless of status. Independently
-// re-verified here — never trusted from a client claim.
+// re-verified here — never trusted from a client claim. Unchanged from
+// Stage 8 — the storage backend change below never touches this.
 const assertCanAccessAttachments = async (memo, requestingUserId) => {
   if (memo.authorId.toString() === String(requestingUserId)) {
     return;
@@ -103,16 +96,19 @@ const uploadAttachment = async (organizationId, memoId, requestingUserId, file) 
 
   // Random, server-generated name — never the client-supplied original
   // filename — so it can't be used for path traversal or to collide with
-  // another upload.
-  const storedFilename = `${crypto.randomUUID()}.${detected.ext}`;
-  const absolutePath = path.join(UPLOADS_DIR, storedFilename);
-  // Re-ensured immediately before every write, not just once at module
-  // load — self-healing against the directory having been removed after
-  // the process started (by anything: a cleanup script, a volume reset),
-  // rather than only working the first time and failing with ENOENT ever
-  // after.
-  await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
-  await fs.promises.writeFile(absolutePath, file.buffer);
+  // another upload. Nested under organizationId/memoId in the bucket:
+  // storedFilename is the FULL Supabase Storage object key (not just the
+  // random leaf name), stored as-is in the DB so download/delete never
+  // need to reconstruct it from separate pieces.
+  const storedFilename = `${organizationId}/${memo._id}/${crypto.randomUUID()}.${detected.ext}`;
+
+  const supabase = getSupabaseClient();
+  const { error: uploadError } = await supabase.storage
+    .from(SUPABASE_BUCKET)
+    .upload(storedFilename, file.buffer, { contentType: detected.mimetype, upsert: false });
+  if (uploadError) {
+    throw new ApiError(502, `Failed to upload attachment to storage: ${uploadError.message}`);
+  }
 
   let attachment;
   try {
@@ -126,8 +122,8 @@ const uploadAttachment = async (organizationId, memoId, requestingUserId, file) 
       uploadedBy: requestingUserId,
     });
   } catch (error) {
-    // Don't leave an orphaned file on disk if the DB record failed.
-    await fs.promises.unlink(absolutePath).catch(() => {});
+    // Don't leave an orphaned object in storage if the DB record failed.
+    await supabase.storage.from(SUPABASE_BUCKET).remove([storedFilename]).catch(() => {});
     throw error;
   }
 
@@ -147,17 +143,22 @@ const listAttachments = async (organizationId, memoId, requestingUserId) => {
 
   // storedFilename is excluded here — no legitimate client use for it, and
   // the download endpoint below never accepts one as input anyway, so there
-  // is no reason for an authorized client to ever see the raw storage path.
+  // is no reason for an authorized client to ever see the raw storage key.
   return Attachment.find({ memoId: memo._id })
     .select('-storedFilename')
     .sort({ createdAt: 1 })
     .populate('uploadedBy', 'name');
 };
 
-// The download path is always derived from the attachment record the
-// caller was just authorized to see — never from anything in the request
-// URL directly — so there is no way to reach a file by guessing or
-// constructing a storedFilename/path.
+// Authorization happens first, exactly as in Stage 8, before any storage
+// access is even attempted — a 403/404 here means Supabase is never
+// touched. Once authorized, the object is fetched server-side (using the
+// service-role client) and its bytes returned directly, rather than handing
+// the client any kind of URL (signed or otherwise) — see the "download
+// approach" note in the Stage 8b report for why proxying bytes was chosen
+// over a short-lived signed URL: it means the authorization check runs on
+// every single byte-serving request, with no window at all — not even a
+// short one — where a captured/cached URL could work on its own.
 const getAttachmentForDownload = async (organizationId, memoId, attachmentId, requestingUserId) => {
   const memo = await findMemoInOrg(organizationId, memoId);
   await assertCanAccessAttachments(memo, requestingUserId);
@@ -167,7 +168,18 @@ const getAttachmentForDownload = async (organizationId, memoId, attachmentId, re
     throw new ApiError(404, 'Attachment not found');
   }
 
-  return { attachment, absolutePath: path.join(UPLOADS_DIR, attachment.storedFilename) };
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.storage.from(SUPABASE_BUCKET).download(attachment.storedFilename);
+  if (error || !data) {
+    throw new ApiError(502, `Failed to retrieve attachment from storage: ${error?.message || 'not found'}`);
+  }
+
+  // supabase-js's download() resolves a Blob (a browser-shaped API it
+  // polyfills even under Node) — converted to a Buffer here so the
+  // controller can res.send() it directly, same as Stage 8's res.download().
+  const buffer = Buffer.from(await data.arrayBuffer());
+
+  return { attachment, buffer };
 };
 
 const deleteAttachment = async (organizationId, memoId, attachmentId, requestingUserId) => {
@@ -189,11 +201,12 @@ const deleteAttachment = async (organizationId, memoId, attachmentId, requesting
     description: `File "${attachment.filename}" was deleted from memo ${memo.referenceNumber} ("${memo.subject}").`,
   });
 
-  const absolutePath = path.join(UPLOADS_DIR, attachment.storedFilename);
-  await fs.promises.unlink(absolutePath).catch((error) => {
+  const supabase = getSupabaseClient();
+  const { error } = await supabase.storage.from(SUPABASE_BUCKET).remove([attachment.storedFilename]);
+  if (error) {
     // eslint-disable-next-line no-console
-    console.error('Failed to remove attachment file from disk:', error);
-  });
+    console.error('Failed to remove attachment object from storage:', error);
+  }
 };
 
 module.exports = {

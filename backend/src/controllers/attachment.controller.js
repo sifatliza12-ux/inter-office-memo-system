@@ -21,13 +21,20 @@ const listAttachments = asyncHandler(async (req, res) => {
 });
 
 const downloadAttachment = asyncHandler(async (req, res) => {
-  const { attachment, absolutePath } = await attachmentService.getAttachmentForDownload(
+  const { attachment, buffer } = await attachmentService.getAttachmentForDownload(
     req.user.organizationId,
     req.params.id,
     req.params.attachmentId,
     req.user.id
   );
-  res.download(absolutePath, attachment.filename);
+  // res.attachment() (not a hand-built Content-Disposition string) so the
+  // user-supplied original filename goes through Express's own
+  // content-disposition encoding/escaping — the same header-injection
+  // safety res.download() gave for free in Stage 8, now that there's no
+  // local file for res.download() itself to serve.
+  res.attachment(attachment.filename);
+  res.type(attachment.mimetype);
+  res.send(buffer);
 });
 
 const deleteAttachment = asyncHandler(async (req, res) => {
