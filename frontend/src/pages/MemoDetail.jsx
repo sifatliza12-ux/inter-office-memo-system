@@ -8,11 +8,9 @@ import { useAuth } from '../context/AuthContext.jsx';
 import ApprovalActions from '../components/ApprovalActions.jsx';
 import AddParticipantControl from '../components/AddParticipantControl.jsx';
 import RemoveParticipantControl from '../components/RemoveParticipantControl.jsx';
-import WorkflowTimeline from '../components/WorkflowTimeline.jsx';
+import MemoHistoryTimeline from '../components/MemoHistoryTimeline.jsx';
 import CommentsSection from '../components/CommentsSection.jsx';
 import AttachmentsSection from '../components/AttachmentsSection.jsx';
-import VersionHistorySection from '../components/VersionHistorySection.jsx';
-import ActionLogSection from '../components/ActionLogSection.jsx';
 import NavBar from '../components/NavBar.jsx';
 import Card from '../components/ui/Card.jsx';
 import Button from '../components/ui/Button.jsx';
@@ -209,10 +207,6 @@ function MemoDetail() {
                 <p className="text-sm font-medium text-stone-700">Body</p>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-stone-800">{memo.body}</p>
               </div>
-
-              <div className="mt-5 border-t border-stone-100 pt-5">
-                <VersionHistorySection memoId={id} />
-              </div>
             </Card>
 
             <Card padded={false}>
@@ -235,15 +229,10 @@ function MemoDetail() {
             </Card>
 
             <Card>
-              <p className="text-sm font-medium text-stone-700">Workflow Timeline</p>
+              <p className="text-sm font-medium text-stone-700">Memo History</p>
               <div className="mt-3">
-                <WorkflowTimeline steps={workflowSteps} />
+                <MemoHistoryTimeline memoId={id} />
               </div>
-            </Card>
-
-            {/* Stage 13b scaffolding — plain by design, see ActionLogSection. */}
-            <Card>
-              <ActionLogSection memoId={id} />
             </Card>
 
             {isCurrentApprover && <ApprovalActions memoId={id} users={directory.users} onActionComplete={fetchAll} />}
