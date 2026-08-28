@@ -34,6 +34,12 @@ router.post('/:id/resubmit', workflowController.resubmitMemo);
 router.post('/:id/workflow/add-participant', workflowController.addParticipant);
 router.get('/:id/workflow', workflowController.getWorkflowHistory);
 
+// Pre-Stage-3: descriptive-only metadata on the caller's own WorkflowStep —
+// no authorization/ordering/workflow-decision effect. Self-only by
+// construction (see workflow.service.js's setMyRoleLabel); independent of
+// memo.status and of current-approver standing.
+router.patch('/:id/workflow/role', workflowController.setMyRoleLabel);
+
 // Stage 13c: new dynamic workflow actions, alongside (not replacing) the
 // existing approve/reject/request-changes/add-participant above.
 router.post('/:id/redirect', workflowController.redirectMemo);

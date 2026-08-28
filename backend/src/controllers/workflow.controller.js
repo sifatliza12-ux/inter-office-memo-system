@@ -1,5 +1,6 @@
 const asyncHandler = require('../utils/asyncHandler');
 const workflowService = require('../services/workflow.service');
+const ApiError = require('../utils/ApiError');
 
 const approveMemo = asyncHandler(async (req, res) => {
   const memo = await workflowService.approveMemo(
@@ -76,6 +77,19 @@ const removeParticipant = asyncHandler(async (req, res) => {
   res.status(200).json({ memo, workflowStep });
 });
 
+// Pre-Stage-3. `express.json()` already rejects malformed JSON with a 400
+// before this handler ever runs — this only needs to catch a request whose
+// body parsed successfully but isn't a JSON object (a bare string, number,
+// array, or null), which req.body.roleLabel would otherwise silently read
+// as undefined instead of properly failing validation.
+const setMyRoleLabel = asyncHandler(async (req, res) => {
+  if (typeof req.body !== 'object' || req.body === null || Array.isArray(req.body)) {
+    throw new ApiError(400, 'Request body must be a JSON object');
+  }
+  const workflowStep = await workflowService.setMyRoleLabel(req.user.organizationId, req.params.id, req.user.id, req.body);
+  res.status(200).json({ workflowStep });
+});
+
 const getWorkflowHistory = asyncHandler(async (req, res) => {
   const workflowSteps = await workflowService.getWorkflowHistory(
     req.user.organizationId,
@@ -99,6 +113,7 @@ module.exports = {
   redirectMemo,
   declineRedirectMemo,
   removeParticipant,
+  setMyRoleLabel,
   getWorkflowHistory,
   getMemoActions,
 };

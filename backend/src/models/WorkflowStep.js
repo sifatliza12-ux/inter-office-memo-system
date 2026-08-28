@@ -36,6 +36,16 @@ const workflowStepSchema = new Schema(
       type: String,
       trim: true,
     },
+    // Pre-Stage-3: purely descriptive metadata the participant sets for
+    // themselves (e.g. "Legal Advisor") — never read by any authorization,
+    // ordering, or workflow-decision logic. Normalized (trimmed, empty ->
+    // unset) by workflow.service.js's setMyRoleLabel before it ever reaches
+    // this field.
+    roleLabel: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+    },
   },
   { timestamps: true }
 );

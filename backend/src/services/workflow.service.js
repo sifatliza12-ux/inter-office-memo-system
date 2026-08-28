@@ -619,6 +619,64 @@ const removeParticipant = async (organizationId, id, requestingUserId, { userId,
   return { memo, workflowStep: targetStep };
 };
 
+const MAX_ROLE_LABEL_LENGTH = 100;
+
+// Rejects any attempt to select a different record than the caller's own —
+// checked before anything else, so a client can never even attempt to
+// target another participant's step through the body, regardless of the
+// value supplied.
+const assertNoTargetingFields = (body) => {
+  if (
+    Object.prototype.hasOwnProperty.call(body, 'userId') ||
+    Object.prototype.hasOwnProperty.call(body, 'participantId') ||
+    Object.prototype.hasOwnProperty.call(body, 'workflowStepId')
+  ) {
+    throw new ApiError(403, 'You may only update your own workflow step');
+  }
+};
+
+// undefined (omitted), '', and whitespace-only all normalize to unset
+// (null) — never an empty string. Trimmed and length-checked before ever
+// reaching the schema, so a truncation never silently happens.
+const normalizeRoleLabel = (rawValue) => {
+  if (rawValue === undefined) {
+    return null;
+  }
+  if (typeof rawValue !== 'string') {
+    throw new ApiError(400, 'roleLabel must be a string');
+  }
+  const trimmed = rawValue.trim();
+  if (trimmed.length > MAX_ROLE_LABEL_LENGTH) {
+    throw new ApiError(400, `roleLabel must be ${MAX_ROLE_LABEL_LENGTH} characters or fewer`);
+  }
+  return trimmed || null;
+};
+
+// Pre-Stage-3: purely descriptive metadata, deliberately independent of
+// memo.status and of whether the caller is the current approver — a past,
+// current, or future participant may all set their own label at any time.
+// Self-only by construction: the only lookup key is {memoId, userId:
+// requestingUserId}, never any id supplied by the client (see
+// assertNoTargetingFields above). Touches exactly one WorkflowStep field —
+// no WorkflowAction, audit event, notification, or memo mutation of any
+// kind, unlike every other function in this file.
+const setMyRoleLabel = async (organizationId, id, requestingUserId, body) => {
+  assertNoTargetingFields(body);
+  const roleLabel = normalizeRoleLabel(body.roleLabel);
+
+  const memo = await findMemoInOrg(organizationId, id);
+
+  const workflowStep = await WorkflowStep.findOne({ memoId: memo._id, userId: requestingUserId });
+  if (!workflowStep) {
+    throw new ApiError(404, "You are not a participant in this memo's workflow");
+  }
+
+  workflowStep.roleLabel = roleLabel;
+  await workflowStep.save();
+
+  return workflowStep;
+};
+
 const getWorkflowHistory = async (organizationId, id, requestingUserId) => {
   // Reuses Stage 4's view-authorization exactly (author or any participant,
   // past/present) rather than a separate rule for this endpoint. Unchanged
@@ -645,6 +703,7 @@ module.exports = {
   redirectMemo,
   declineRedirectMemo,
   removeParticipant,
+  setMyRoleLabel,
   getWorkflowHistory,
   getMemoActions,
 };
