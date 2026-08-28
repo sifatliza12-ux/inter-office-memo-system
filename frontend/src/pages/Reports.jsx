@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { getReports } from '../services/reports';
 import { getDirectory } from '../services/directory';
-import NavBar from '../components/NavBar.jsx';
+import AppShell from '../components/AppShell.jsx';
 import PageContainer from '../components/ui/PageContainer.jsx';
 import Card from '../components/ui/Card.jsx';
 import Button from '../components/ui/Button.jsx';
@@ -85,8 +85,7 @@ function Reports() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 pt-16 lg:pl-60">
-      <NavBar />
+    <AppShell>
       <PageContainer title="Reports">
         <Card>
           <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
@@ -229,7 +228,7 @@ function Reports() {
           </div>
         )}
       </PageContainer>
-    </div>
+    </AppShell>
   );
 }
 

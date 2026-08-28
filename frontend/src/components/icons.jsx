@@ -111,3 +111,56 @@ export function LogoutIcon(props) {
     </svg>
   );
 }
+
+export function DraftIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M7 3.5h8l4 4V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" strokeDasharray="2.5 2.5" />
+      <path d="M15 3.5V8h4" />
+    </svg>
+  );
+}
+
+export function ChevronLeftIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M14.5 5.5 8 12l6.5 6.5" />
+    </svg>
+  );
+}
+
+export function ChevronRightIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="m9.5 5.5 6.5 6.5-6.5 6.5" />
+    </svg>
+  );
+}
+
+export function PeopleIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="9" cy="8" r="3" />
+      <path d="M3.5 19.5c0-3 2.5-5.5 5.5-5.5s5.5 2.5 5.5 5.5" />
+      <path d="M16 8.5a2.75 2.75 0 1 1 0-5.5" />
+      <path d="M17.5 14.2c2 .4 3.5 2.4 3.5 4.8" />
+    </svg>
+  );
+}
+
+export function CheckIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="m5 12.5 4.5 4.5L19 7.5" />
+    </svg>
+  );
+}
+
+export function BuildingIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="5" y="3.5" width="14" height="17" rx="1" />
+      <path d="M9 8h2M13 8h2M9 12h2M13 12h2M9 16h2M13 16h2" />
+    </svg>
+  );
+}

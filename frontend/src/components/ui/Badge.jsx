@@ -29,8 +29,8 @@ const STATUS_CONFIG = {
 export function StatusBadge({ status, label, className = '' }) {
   const config = STATUS_CONFIG[status] || { dot: 'bg-stone-400', text: 'text-stone-600', label: status || '—' };
   return (
-    <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${config.text} ${className}`}>
-      <span className={`h-2 w-2 shrink-0 rounded-full ${config.dot}`} aria-hidden="true" />
+    <span className={`inline-flex items-center gap-1.5 text-sm font-medium transition-colors duration-200 ${config.text} ${className}`}>
+      <span className={`h-2 w-2 shrink-0 rounded-full transition-colors duration-200 ${config.dot}`} aria-hidden="true" />
       {label || config.label}
     </span>
   );
@@ -61,8 +61,8 @@ const ACTION_CONFIG = {
 export function ActionBadge({ action, label, className = '' }) {
   const config = ACTION_CONFIG[action] || { dot: 'bg-stone-400', text: 'text-stone-600', label: action || '—' };
   return (
-    <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${config.text} ${className}`}>
-      <span className={`h-2 w-2 shrink-0 rounded-full ${config.dot}`} aria-hidden="true" />
+    <span className={`inline-flex items-center gap-1.5 text-sm font-medium transition-colors duration-200 ${config.text} ${className}`}>
+      <span className={`h-2 w-2 shrink-0 rounded-full transition-colors duration-200 ${config.dot}`} aria-hidden="true" />
       {label || config.label}
     </span>
   );

@@ -5,23 +5,35 @@ import Card from './ui/Card.jsx';
 import Button from './ui/Button.jsx';
 import Textarea from './ui/Textarea.jsx';
 import Select from './ui/Select.jsx';
+import { CheckIcon } from './icons.jsx';
+
+const SUCCESS_DELAY_MS = 450;
 
 function ApprovalActions({ memoId, users, onActionComplete }) {
   const [comment, setComment] = useState('');
   const [redirectTarget, setRedirectTarget] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [successLabel, setSuccessLabel] = useState('');
 
-  const runAction = async (action) => {
+  // On success, briefly shows a confirmation state before calling
+  // onActionComplete() — every action here removes this component from the
+  // tree once the parent refetches (the memo is no longer awaiting this
+  // user's turn), so state is deliberately left as-is afterward rather than
+  // reset, since there's nothing left mounted to reset it on.
+  const runAction = async (action, label) => {
     setError('');
     setBusy(true);
     try {
       await action();
       setComment('');
+      if (label) {
+        setSuccessLabel(label);
+        await new Promise((resolve) => setTimeout(resolve, SUCCESS_DELAY_MS));
+      }
       await onActionComplete();
     } catch (actionError) {
       setError(actionError.response?.data?.message || 'That action failed');
-    } finally {
       setBusy(false);
     }
   };
@@ -29,7 +41,7 @@ function ApprovalActions({ memoId, users, onActionComplete }) {
   // Redirect and decline-redirect both need a target picked, in addition
   // to the shared comment field below — checked client-side first so the
   // error is immediate, then re-verified server-side regardless.
-  const runRedirectAction = (apiCall) => {
+  const runRedirectAction = (apiCall, label) => {
     setError('');
     if (!redirectTarget) {
       setError('Select a user to redirect to');
@@ -39,8 +51,19 @@ function ApprovalActions({ memoId, users, onActionComplete }) {
       setError('A comment is required');
       return;
     }
-    runAction(() => apiCall(memoId, redirectTarget, comment));
+    runAction(() => apiCall(memoId, redirectTarget, comment), label);
   };
+
+  if (successLabel) {
+    return (
+      <Card className="animate-fade-in-up flex items-center gap-2.5 border-emerald-200 bg-emerald-50">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
+          <CheckIcon className="h-3.5 w-3.5" />
+        </span>
+        <p className="text-sm font-semibold text-emerald-800">{successLabel}</p>
+      </Card>
+    );
+  }
 
   return (
     <Card className="border-plum-200 bg-plum-50/60">
@@ -65,7 +88,7 @@ function ApprovalActions({ memoId, users, onActionComplete }) {
           size="sm"
           className="bg-emerald-600 hover:bg-emerald-700 focus-visible:ring-emerald-300"
           disabled={busy}
-          onClick={() => runAction(() => approveMemo(memoId, comment || undefined))}
+          onClick={() => runAction(() => approveMemo(memoId, comment || undefined), 'Approved')}
         >
           Approve
         </Button>
@@ -75,11 +98,17 @@ function ApprovalActions({ memoId, users, onActionComplete }) {
           size="sm"
           className="bg-amber-500 hover:bg-amber-600 focus-visible:ring-amber-300"
           disabled={busy}
-          onClick={() => runAction(() => requestChanges(memoId, comment))}
+          onClick={() => runAction(() => requestChanges(memoId, comment), 'Changes Requested')}
         >
           Request Changes
         </Button>
-        <Button type="button" variant="danger" size="sm" disabled={busy} onClick={() => runAction(() => rejectMemo(memoId, comment))}>
+        <Button
+          type="button"
+          variant="danger"
+          size="sm"
+          disabled={busy}
+          onClick={() => runAction(() => rejectMemo(memoId, comment), 'Rejected')}
+        >
           Reject
         </Button>
       </div>
@@ -100,7 +129,7 @@ function ApprovalActions({ memoId, users, onActionComplete }) {
             variant="outline"
             size="sm"
             disabled={busy}
-            onClick={() => runRedirectAction(redirectMemo)}
+            onClick={() => runRedirectAction(redirectMemo, 'Redirected')}
           >
             Redirect to...
           </Button>
@@ -109,7 +138,7 @@ function ApprovalActions({ memoId, users, onActionComplete }) {
             variant="outline"
             size="sm"
             disabled={busy}
-            onClick={() => runRedirectAction(declineRedirectMemo)}
+            onClick={() => runRedirectAction(declineRedirectMemo, 'Declined & Redirected')}
           >
             Decline &amp; Redirect to...
           </Button>

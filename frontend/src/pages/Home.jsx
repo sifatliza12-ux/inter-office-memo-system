@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 
 import { useAuth } from '../context/AuthContext.jsx';
-import NavBar from '../components/NavBar.jsx';
+import AppShell from '../components/AppShell.jsx';
 import Card from '../components/ui/Card.jsx';
 import { MemosIcon, InboxIcon, DashboardIcon, SearchIcon } from '../components/icons.jsx';
 
@@ -16,8 +16,7 @@ function Home() {
   const { user } = useAuth();
 
   return (
-    <div className="min-h-screen bg-stone-50 pt-16 lg:pl-60">
-      <NavBar />
+    <AppShell>
       <div className="mx-auto max-w-4xl space-y-8 px-4 py-10 sm:px-6">
         <div className="animate-fade-in-up text-center">
           <p className="font-mono text-xs font-semibold uppercase tracking-widest text-terracotta-500">
@@ -48,7 +47,7 @@ function Home() {
           ))}
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }
 

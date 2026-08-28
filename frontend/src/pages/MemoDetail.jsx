@@ -11,7 +11,7 @@ import RemoveParticipantControl from '../components/RemoveParticipantControl.jsx
 import MemoHistoryTimeline from '../components/MemoHistoryTimeline.jsx';
 import CommentsSection from '../components/CommentsSection.jsx';
 import AttachmentsSection from '../components/AttachmentsSection.jsx';
-import NavBar from '../components/NavBar.jsx';
+import AppShell from '../components/AppShell.jsx';
 import Card from '../components/ui/Card.jsx';
 import Button from '../components/ui/Button.jsx';
 import { StatusBadge } from '../components/ui/Badge.jsx';
@@ -168,8 +168,7 @@ function MemoDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 pt-16 lg:pl-60">
-      <NavBar />
+    <AppShell>
       <div className="mx-auto max-w-6xl animate-fade-in-up space-y-6 px-4 py-6 sm:px-6 sm:py-8">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -190,37 +189,31 @@ function MemoDetail() {
 
         {actionError && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{actionError}</p>}
 
+        {/* A flat grid rather than two nested column wrappers, so mobile
+            stacking order (content → actions → status/workflow → secondary
+            attachments/comments) can differ from the desktop 2/3 + 1/3
+            column layout — each item's position is set independently via
+            `order` (mobile) and `lg:col-start`/`lg:row-start` (desktop). */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Left: memo content */}
-          <div className="space-y-6 lg:col-span-2">
-            <Card>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
-                {metaItems.map((item) => (
-                  <div key={item.label}>
-                    <dt className="text-xs uppercase tracking-wide text-stone-400">{item.label}</dt>
-                    <dd className="mt-0.5 text-stone-800">{item.value}</dd>
-                  </div>
-                ))}
-              </dl>
+          <Card className="order-1 lg:order-none lg:col-span-2 lg:row-start-1">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
+              {metaItems.map((item) => (
+                <div key={item.label}>
+                  <dt className="text-xs uppercase tracking-wide text-stone-400">{item.label}</dt>
+                  <dd className="mt-0.5 text-stone-800">{item.value}</dd>
+                </div>
+              ))}
+            </dl>
 
-              <div className="mt-5 border-t border-stone-100 pt-5">
-                <p className="text-sm font-medium text-stone-700">Body</p>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-stone-800">{memo.body}</p>
-              </div>
-            </Card>
+            <div className="mt-5 border-t border-stone-100 pt-5">
+              <p className="text-sm font-medium text-stone-700">Body</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-stone-800">{memo.body}</p>
+            </div>
+          </Card>
 
-            <Card padded={false}>
-              <div className="border-b border-stone-100 px-5 py-4 sm:px-6">
-                <AttachmentsSection memoId={id} canUpload={canComment} currentUserId={currentUserId} isAuthor={isAuthor} />
-              </div>
-              <div className="px-5 py-4 sm:px-6">
-                <CommentsSection memoId={id} canComment={canComment} />
-              </div>
-            </Card>
-          </div>
-
-          {/* Right: status, workflow, actions */}
-          <div className="space-y-6">
+          {/* Status, workflow, and actions — ranked ahead of attachments/
+              comments on mobile, alongside them on desktop. */}
+          <div className="order-2 space-y-6 lg:order-none lg:col-start-3 lg:row-span-2 lg:row-start-1">
             <Card>
               <p className="text-xs font-medium uppercase tracking-wide text-stone-400">Current status</p>
               <div className="mt-1.5">
@@ -283,9 +276,18 @@ function MemoDetail() {
               <p className="text-sm text-stone-500">This memo is read-only for you at this stage.</p>
             )}
           </div>
+
+          <Card padded={false} className="order-3 lg:order-none lg:col-span-2 lg:row-start-2">
+            <div className="border-b border-stone-100 px-5 py-4 sm:px-6">
+              <AttachmentsSection memoId={id} canUpload={canComment} currentUserId={currentUserId} isAuthor={isAuthor} />
+            </div>
+            <div className="px-5 py-4 sm:px-6">
+              <CommentsSection memoId={id} canComment={canComment} />
+            </div>
+          </Card>
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }
 

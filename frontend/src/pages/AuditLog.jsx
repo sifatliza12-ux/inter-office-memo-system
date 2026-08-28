@@ -2,14 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { getAuditLogs } from '../services/auditLogs';
 import { getDirectory } from '../services/directory';
-import NavBar from '../components/NavBar.jsx';
+import AppShell from '../components/AppShell.jsx';
 import PageContainer from '../components/ui/PageContainer.jsx';
 import Card from '../components/ui/Card.jsx';
 import Button from '../components/ui/Button.jsx';
 import Select from '../components/ui/Select.jsx';
 import Input from '../components/ui/Input.jsx';
-import { Table, THead, Th, Tr, Td } from '../components/ui/Table.jsx';
-import { Badge } from '../components/ui/Badge.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 
@@ -39,6 +37,30 @@ const EVENT_TYPES = [
 const PAGE_SIZE = 20;
 
 const emptyFilters = { eventType: '', userId: '', dateFrom: '', dateTo: '' };
+
+// Purely presentational — a color cue per event category so the timeline
+// reads at a glance, without touching the backend-authored description
+// text itself (that stays exactly as Stage 9 wrote it).
+const EXACT_DOT = {
+  WORKFLOW_APPROVED: 'bg-emerald-500',
+  WORKFLOW_COMPLETED: 'bg-emerald-500',
+  WORKFLOW_REJECTED: 'bg-red-500',
+  CHANGE_REQUESTED: 'bg-amber-500',
+  WORKFLOW_REDIRECTED: 'bg-plum-500',
+  WORKFLOW_DECLINED_REDIRECTED: 'bg-terracotta-500',
+};
+const PREFIX_DOT = [
+  ['MEMO_', 'bg-blue-500'],
+  ['WORKFLOW_', 'bg-stone-400'],
+  ['USER_', 'bg-stone-400'],
+  ['COMMENT_', 'bg-stone-400'],
+  ['ATTACHMENT_', 'bg-stone-400'],
+];
+const dotColorFor = (eventType) => {
+  if (EXACT_DOT[eventType]) return EXACT_DOT[eventType];
+  const match = PREFIX_DOT.find(([prefix]) => eventType.startsWith(prefix));
+  return match ? match[1] : 'bg-stone-400';
+};
 
 function AuditLog() {
   const [filters, setFilters] = useState(emptyFilters);
@@ -85,9 +107,9 @@ function AuditLog() {
   const totalPages = Math.max(1, Math.ceil(results.total / (results.limit || PAGE_SIZE)));
 
   return (
-    <div className="min-h-screen bg-stone-50 pt-16 lg:pl-60">
-      <NavBar />
-      <PageContainer title="Audit Log">
+    <AppShell>
+      <PageContainer title="Activity" subtitle="A human-readable record of what happened, by whom, and when">
+      <div className="animate-fade-in-up space-y-6">
         <Card>
           <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
             <div className="w-56">
@@ -158,42 +180,37 @@ function AuditLog() {
 
         {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
-        <Table>
-          <THead>
-            <Th>Timestamp</Th>
-            <Th>Actor</Th>
-            <Th>Event</Th>
-            <Th>Description</Th>
-          </THead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan="4" className="px-4 py-6">
-                  <LoadingSpinner label="Loading..." />
-                </td>
-              </tr>
-            ) : results.auditLogs.length === 0 ? (
-              <tr>
-                <td colSpan="4">
-                  <EmptyState title="No audit log entries found" />
-                </td>
-              </tr>
-            ) : (
-              results.auditLogs.map((entry) => (
-                <Tr key={entry._id}>
-                  <Td className="whitespace-nowrap text-stone-500">{new Date(entry.createdAt).toLocaleString()}</Td>
-                  <Td>{entry.userId?.name || 'Unknown user'}</Td>
-                  <Td className="whitespace-nowrap">
-                    <Badge color="plum" className="font-mono">
-                      {entry.eventType}
-                    </Badge>
-                  </Td>
-                  <Td>{entry.description}</Td>
-                </Tr>
-              ))
-            )}
-          </tbody>
-        </Table>
+        <Card padded={false}>
+          {loading ? (
+            <div className="px-6 py-10">
+              <LoadingSpinner label="Loading..." />
+            </div>
+          ) : results.auditLogs.length === 0 ? (
+            <EmptyState title="No activity found" message="Try adjusting your filters." />
+          ) : (
+            <ol className="space-y-0 px-5 py-5 sm:px-6">
+              {results.auditLogs.map((entry, index) => (
+                <li key={entry._id} className="relative flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <span className={`z-10 mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${dotColorFor(entry.eventType)}`} aria-hidden="true" />
+                    {index !== results.auditLogs.length - 1 && <span className="mt-1 w-px flex-1 bg-stone-200" aria-hidden="true" />}
+                  </div>
+                  <div className="min-w-0 flex-1 pb-5">
+                    <p className="text-sm">
+                      <span className="font-medium text-stone-900">{entry.userId?.name || 'Unknown user'}</span>{' '}
+                      <span className="text-stone-600">{entry.description}</span>
+                    </p>
+                    <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-stone-400">
+                      <span>{new Date(entry.createdAt).toLocaleString()}</span>
+                      <span aria-hidden="true">&middot;</span>
+                      <span className="font-mono">{entry.eventType}</span>
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </Card>
 
         {results.total > 0 && (
           <div className="flex items-center justify-between text-sm text-stone-600">
@@ -222,8 +239,9 @@ function AuditLog() {
             </div>
           </div>
         )}
+      </div>
       </PageContainer>
-    </div>
+    </AppShell>
   );
 }
 

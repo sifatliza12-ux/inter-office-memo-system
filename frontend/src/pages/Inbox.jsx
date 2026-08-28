@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { listInbox } from '../services/memos';
-import NavBar from '../components/NavBar.jsx';
+import AppShell from '../components/AppShell.jsx';
 import PageContainer from '../components/ui/PageContainer.jsx';
 import Card from '../components/ui/Card.jsx';
 import Select from '../components/ui/Select.jsx';
@@ -11,9 +11,18 @@ import { StatusBadge } from '../components/ui/Badge.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 
-const STATUSES = ['submitted', 'changes_requested'];
+const STATUS_TABS = [
+  { value: '', label: 'All' },
+  { value: 'submitted', label: 'Submitted' },
+  { value: 'changes_requested', label: 'Changes Requested' },
+];
 const CATEGORIES = ['Administrative', 'Financial', 'Procurement', 'HR', 'Academic', 'Technical', 'General'];
 const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
+
+const PRIORITY_ACCENT = {
+  urgent: 'text-red-600',
+  high: 'text-terracotta-600',
+};
 
 // ageMs is time since currentStepSince (memo.service.js's listInbox) —
 // exact, not approximate. Still formatted coarsely (minutes/hours/days)
@@ -63,28 +72,29 @@ function Inbox() {
   }, [fetchInbox]);
 
   return (
-    <div className="min-h-screen bg-stone-50 pt-16 lg:pl-60">
-      <NavBar />
+    <AppShell>
       <PageContainer title="Inbox" subtitle="Memos waiting on your review or action">
-        <Card className="flex flex-wrap items-end gap-3">
-          <div className="w-44">
-            <label className="mb-1 block text-xs font-medium text-stone-500" htmlFor="inbox-status-filter">
-              Status
-            </label>
-            <Select
-              id="inbox-status-filter"
-              value={filters.status}
-              onChange={(event) => setFilters({ ...filters, status: event.target.value })}
+      <div className="animate-fade-in-up space-y-6">
+        <div className="flex flex-wrap items-center gap-1.5" role="tablist" aria-label="Filter by status">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              role="tab"
+              aria-selected={filters.status === tab.value}
+              onClick={() => setFilters({ ...filters, status: tab.value })}
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors duration-150 ${
+                filters.status === tab.value
+                  ? 'bg-plum-800 text-white shadow-sm'
+                  : 'bg-white text-stone-600 ring-1 ring-inset ring-stone-200 hover:bg-stone-100'
+              }`}
             >
-              <option value="">All</option>
-              {STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </Select>
-          </div>
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
+        <Card className="flex flex-wrap items-end gap-3">
           <div className="w-44">
             <label className="mb-1 block text-xs font-medium text-stone-500" htmlFor="inbox-category-filter">
               Category
@@ -126,14 +136,14 @@ function Inbox() {
 
         <Table>
           <THead>
-            <Th>Reference #</Th>
-            <Th>Subject</Th>
+            <Th>Memo</Th>
             <Th>Author</Th>
             <Th>Department</Th>
-            <Th>Priority</Th>
             <Th>Status</Th>
-            <Th>Submitted</Th>
-            <Th>Age</Th>
+            <Th>Participants</Th>
+            <Th>Priority</Th>
+            <Th>Waiting</Th>
+            <Th className="text-right">Actions</Th>
           </THead>
           <tbody>
             {loading ? (
@@ -145,35 +155,44 @@ function Inbox() {
             ) : memos.length === 0 ? (
               <tr>
                 <td colSpan="8">
-                  <EmptyState title="Nothing is waiting on you right now" />
+                  <EmptyState title="Nothing is waiting on you right now" message="You're all caught up." />
                 </td>
               </tr>
             ) : (
               memos.map((memo) => (
                 <Tr key={memo._id}>
-                  <Td className="font-mono text-xs">
-                    <Link to={`/memos/${memo._id}`} className="font-medium text-plum-700 hover:underline">
-                      {memo.referenceNumber}
+                  <Td>
+                    <Link to={`/memos/${memo._id}`} className="font-medium text-stone-800 hover:text-plum-700 hover:underline">
+                      {memo.subject}
                     </Link>
+                    <p className="mt-0.5 font-mono text-xs text-stone-400">{memo.referenceNumber}</p>
                   </Td>
-                  <Td>{memo.subject}</Td>
-                  <Td>{memo.authorId?.name || '—'}</Td>
-                  <Td>{memo.departmentId?.name || '—'}</Td>
-                  <Td className="capitalize">{memo.priority}</Td>
+                  <Td className="text-stone-500">{memo.authorId?.name || '—'}</Td>
+                  <Td className="text-stone-500">{memo.departmentId?.name || '—'}</Td>
                   <Td>
                     <StatusBadge status={memo.status} />
                   </Td>
-                  <Td className="whitespace-nowrap text-stone-500">
-                    {memo.submittedAt ? new Date(memo.submittedAt).toLocaleDateString() : '—'}
+                  <Td className="text-stone-500">{memo.workflowParticipants?.length || 0}</Td>
+                  <Td className={`capitalize ${PRIORITY_ACCENT[memo.priority] || 'text-stone-600'}`}>{memo.priority}</Td>
+                  <Td>
+                    <p className="font-medium text-stone-700">{formatAge(memo.ageMs)}</p>
+                    <p className="text-xs text-stone-400">
+                      {memo.submittedAt ? new Date(memo.submittedAt).toLocaleDateString() : '—'}
+                    </p>
                   </Td>
-                  <Td className="text-stone-500">{formatAge(memo.ageMs)}</Td>
+                  <Td className="text-right">
+                    <Link to={`/memos/${memo._id}`} className="text-sm font-medium text-plum-700 hover:underline">
+                      Review →
+                    </Link>
+                  </Td>
                 </Tr>
               ))
             )}
           </tbody>
         </Table>
+      </div>
       </PageContainer>
-    </div>
+    </AppShell>
   );
 }
 
