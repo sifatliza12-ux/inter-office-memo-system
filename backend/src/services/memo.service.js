@@ -6,6 +6,8 @@ const { generateMemoReferenceNumber } = require('./referenceNumber.service');
 const { assertDepartmentBelongsToOrg } = require('./user.service');
 const { notifyAwaitingApproval } = require('./notification.service');
 const { logAuditEvent } = require('./audit.service');
+const { snapshotMemoVersion, listVersions } = require('./memoVersion.service');
+const { recordWorkflowAction } = require('./workflowAction.service');
 
 const ALLOWED_CATEGORIES = ['Administrative', 'Financial', 'Procurement', 'HR', 'Academic', 'Technical', 'General'];
 const ALLOWED_PRIORITIES = ['low', 'normal', 'high', 'urgent'];
@@ -345,6 +347,12 @@ const submitMemo = async (organizationId, id, requestingUserId) => {
   memo.currentApproverId = createdSteps[0].userId;
   memo.currentStepOrder = createdSteps[0].stepOrder;
   memo.currentStepSince = memo.submittedAt;
+  // Stage 13a: the historical record of what was originally planned, set
+  // ONCE here from whatever workflowParticipants contains at this exact
+  // moment — copied, not referenced, so later mutations to the live
+  // workflowParticipants array (e.g. add-participant) can never affect it.
+  memo.originalWorkflowParticipants = [...memo.workflowParticipants];
+  memo.currentVersionNumber = 1;
 
   try {
     await memo.save();
@@ -354,6 +362,22 @@ const submitMemo = async (organizationId, id, requestingUserId) => {
     await WorkflowStep.deleteMany({ memoId: memo._id });
     throw error;
   }
+
+  // First content snapshot — see Stage 13a. Deliberately after the memo
+  // save succeeds, so a MemoVersion only ever exists for a memo state that
+  // actually made it to 'submitted'.
+  await snapshotMemoVersion(memo, requestingUserId);
+
+  // Stage 13b: general event-log entry alongside the WorkflowStep write
+  // above — written IN ADDITION to it, not instead of it, this stage.
+  await recordWorkflowAction({
+    memoId: memo._id,
+    organizationId,
+    versionNumber: memo.currentVersionNumber,
+    actor: requestingUserId,
+    action: 'MEMO_SUBMITTED',
+    recipient: createdSteps[0].userId,
+  });
 
   await notifyAwaitingApproval(memo, createdSteps[0].userId);
 
@@ -383,6 +407,13 @@ const submitMemo = async (organizationId, id, requestingUserId) => {
   return { memo, workflowSteps: createdSteps };
 };
 
+// Same view-authorization as GET /api/memos/:id (author, or any user with a
+// WorkflowStep on the memo, any status) — see Stage 13a.
+const listMemoVersions = async (organizationId, id, requestingUserId) => {
+  const memo = await getMemoById(organizationId, id, requestingUserId);
+  return listVersions(memo._id);
+};
+
 module.exports = {
   createMemo,
   listMyMemos,
@@ -392,4 +423,5 @@ module.exports = {
   updateMemo,
   deleteMemo,
   submitMemo,
+  listMemoVersions,
 };

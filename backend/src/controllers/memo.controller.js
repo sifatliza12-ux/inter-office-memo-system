@@ -71,6 +71,11 @@ const submitMemo = asyncHandler(async (req, res) => {
   res.status(200).json({ memo, workflowSteps });
 });
 
+const getMemoVersions = asyncHandler(async (req, res) => {
+  const versions = await memoService.listMemoVersions(req.user.organizationId, req.params.id, req.user.id);
+  res.status(200).json({ versions });
+});
+
 module.exports = {
   createMemo,
   listMyMemos,
@@ -80,4 +85,5 @@ module.exports = {
   updateMemo,
   deleteMemo,
   submitMemo,
+  getMemoVersions,
 };

@@ -57,6 +57,26 @@ const memoSchema = new Schema(
         ref: 'User',
       },
     ],
+    // Snapshotted ONCE, from workflowParticipants, at first submission
+    // (memo.service.js's submitMemo) — never touched again by anything,
+    // including add-participant. workflowParticipants above remains the
+    // live/current list and keeps being mutated exactly as before; this
+    // field exists purely as the immutable historical record of what was
+    // originally planned. See Stage 13a.
+    originalWorkflowParticipants: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
+    // Mirrors the highest MemoVersion.versionNumber snapshotted for this
+    // memo so far. Set to 1 on first submission and incremented by one on
+    // every resubmit — see memo.service.js's submitMemo and
+    // workflow.service.js's resubmitMemo. See Stage 13a.
+    currentVersionNumber: {
+      type: Number,
+      default: 1,
+    },
     referenceNumber: {
       type: String,
       required: true,

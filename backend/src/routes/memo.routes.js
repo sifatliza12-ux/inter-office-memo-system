@@ -34,6 +34,15 @@ router.post('/:id/resubmit', workflowController.resubmitMemo);
 router.post('/:id/workflow/add-participant', workflowController.addParticipant);
 router.get('/:id/workflow', workflowController.getWorkflowHistory);
 
+// Immutable content snapshots (Stage 13a) — read-only, no PATCH/DELETE ever
+// wired up for MemoVersion, by design.
+router.get('/:id/versions', memoController.getMemoVersions);
+
+// Stage 13b: general workflow event log, written alongside (not instead of)
+// the WorkflowStep-backed /:id/workflow route above. Read-only, no
+// PATCH/DELETE ever wired up for WorkflowAction, by design.
+router.get('/:id/actions', workflowController.getMemoActions);
+
 // Generated on-demand per request, never persisted — not a new Attachment.
 router.get('/:id/export/pdf', exportController.exportMemoPdf);
 

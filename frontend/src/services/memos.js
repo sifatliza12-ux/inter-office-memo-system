@@ -14,6 +14,8 @@ export const deleteMemo = (id) => api.delete(`/memos/${id}`);
 
 export const submitMemo = (id) => api.post(`/memos/${id}/submit`);
 
+export const getMemoVersions = (id) => api.get(`/memos/${id}/versions`);
+
 // Same authenticated-blob-download pattern as attachments.js's
 // downloadAttachment — a plain <a href> can't carry the bearer token this
 // app authenticates with, so the file is fetched through the normal axios

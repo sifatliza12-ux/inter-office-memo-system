@@ -55,6 +55,11 @@ const getWorkflowHistory = asyncHandler(async (req, res) => {
   res.status(200).json({ workflowSteps });
 });
 
+const getMemoActions = asyncHandler(async (req, res) => {
+  const actions = await workflowService.getMemoActions(req.user.organizationId, req.params.id, req.user.id);
+  res.status(200).json({ actions });
+});
+
 module.exports = {
   approveMemo,
   rejectMemo,
@@ -62,4 +67,5 @@ module.exports = {
   resubmitMemo,
   addParticipant,
   getWorkflowHistory,
+  getMemoActions,
 };

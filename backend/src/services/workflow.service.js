@@ -11,6 +11,8 @@ const {
   notifyParticipantAdded,
 } = require('./notification.service');
 const { logAuditEvent } = require('./audit.service');
+const { snapshotMemoVersion } = require('./memoVersion.service');
+const { recordWorkflowAction, listActions } = require('./workflowAction.service');
 
 const STEP_ORDER_INCREMENT = 10;
 
@@ -89,6 +91,17 @@ const approveMemo = async (organizationId, id, requestingUserId, comment) => {
 
   await memo.save();
 
+  // Stage 13b: alongside the currentStep write above, not instead of it.
+  await recordWorkflowAction({
+    memoId: memo._id,
+    organizationId,
+    versionNumber: memo.currentVersionNumber,
+    actor: requestingUserId,
+    action: 'APPROVED',
+    comment,
+    recipient: nextStep ? nextStep.userId : null,
+  });
+
   if (nextStep) {
     await notifyAwaitingApproval(memo, nextStep.userId);
   } else {
@@ -130,6 +143,18 @@ const rejectMemo = async (organizationId, id, requestingUserId, comment) => {
   memo.currentStepOrder = undefined;
   memo.currentStepSince = undefined;
   await memo.save();
+
+  // Stage 13b: alongside the currentStep write above, not instead of it.
+  await recordWorkflowAction({
+    memoId: memo._id,
+    organizationId,
+    versionNumber: memo.currentVersionNumber,
+    actor: requestingUserId,
+    action: 'DECLINED',
+    comment,
+    recipient: null,
+  });
+
   await notifyRejected(memo);
 
   await logAuditEvent({
@@ -160,6 +185,18 @@ const requestChanges = async (organizationId, id, requestingUserId, comment) => 
   memo.currentStepOrder = undefined;
   memo.currentStepSince = undefined;
   await memo.save();
+
+  // Stage 13b: alongside the currentStep write above, not instead of it.
+  await recordWorkflowAction({
+    memoId: memo._id,
+    organizationId,
+    versionNumber: memo.currentVersionNumber,
+    actor: requestingUserId,
+    action: 'CHANGES_REQUESTED',
+    comment,
+    recipient: null,
+  });
+
   await notifyChangesRequested(memo);
 
   await logAuditEvent({
@@ -251,7 +288,29 @@ const resubmitMemo = async (organizationId, id, requestingUserId) => {
   memo.currentApproverId = newStep.userId;
   memo.currentStepOrder = newStep.stepOrder;
   memo.currentStepSince = new Date();
+  // Stage 13a: a new content snapshot per resubmit. originalWorkflowParticipants
+  // is deliberately NOT touched here — it was set once at first submission
+  // and stays the historical record forever, regardless of how many times
+  // the memo is resubmitted or how workflowParticipants (live) has changed.
+  memo.currentVersionNumber += 1;
   await memo.save();
+
+  // Snapshots whatever content is on the memo right now — i.e. whatever the
+  // author edited via PATCH before calling resubmit.
+  await snapshotMemoVersion(memo, requestingUserId);
+
+  // Stage 13b: alongside the new WorkflowStep created above, not instead of
+  // it. versionNumber is read AFTER the increment above, so this correctly
+  // reflects the NEW version this resubmission just produced.
+  await recordWorkflowAction({
+    memoId: memo._id,
+    organizationId,
+    versionNumber: memo.currentVersionNumber,
+    actor: requestingUserId,
+    action: 'RESUBMITTED',
+    recipient: newStep.userId,
+  });
+
   await notifyAwaitingApproval(memo, newStep.userId);
 
   await logAuditEvent({
@@ -308,6 +367,18 @@ const addParticipant = async (organizationId, id, requestingUserId, { userId, re
   memo.workflowParticipants.push(userId);
   await memo.save();
 
+  // Stage 13b: alongside the new WorkflowStep created above, not instead of
+  // it.
+  await recordWorkflowAction({
+    memoId: memo._id,
+    organizationId,
+    versionNumber: memo.currentVersionNumber,
+    actor: requestingUserId,
+    action: 'PARTICIPANT_ADDED',
+    comment: reason,
+    recipient: userId,
+  });
+
   await logAuditEvent({
     organizationId,
     userId: requestingUserId,
@@ -321,10 +392,19 @@ const addParticipant = async (organizationId, id, requestingUserId, { userId, re
 
 const getWorkflowHistory = async (organizationId, id, requestingUserId) => {
   // Reuses Stage 4's view-authorization exactly (author or any participant,
-  // past/present) rather than a separate rule for this endpoint.
+  // past/present) rather than a separate rule for this endpoint. Unchanged
+  // by Stage 13b — still returns WorkflowStep data exactly as before.
   const memo = await memoService.getMemoById(organizationId, id, requestingUserId);
 
   return WorkflowStep.find({ memoId: memo._id }).sort({ stepOrder: 1 }).populate('userId', 'name');
+};
+
+// Stage 13b: same view-authorization as GET /api/memos/:id (author, or any
+// user with a WorkflowStep on the memo, any status) — a NEW, separate
+// endpoint from getWorkflowHistory above, not a replacement for it.
+const getMemoActions = async (organizationId, id, requestingUserId) => {
+  const memo = await memoService.getMemoById(organizationId, id, requestingUserId);
+  return listActions(memo._id);
 };
 
 module.exports = {
@@ -334,4 +414,5 @@ module.exports = {
   resubmitMemo,
   addParticipant,
   getWorkflowHistory,
+  getMemoActions,
 };

@@ -10,6 +10,8 @@ import AddParticipantControl from '../components/AddParticipantControl.jsx';
 import WorkflowTimeline from '../components/WorkflowTimeline.jsx';
 import CommentsSection from '../components/CommentsSection.jsx';
 import AttachmentsSection from '../components/AttachmentsSection.jsx';
+import VersionHistorySection from '../components/VersionHistorySection.jsx';
+import ActionLogSection from '../components/ActionLogSection.jsx';
 import NavBar from '../components/NavBar.jsx';
 import Card from '../components/ui/Card.jsx';
 import Button from '../components/ui/Button.jsx';
@@ -197,6 +199,10 @@ function MemoDetail() {
                 <p className="text-sm font-medium text-stone-700">Body</p>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-stone-800">{memo.body}</p>
               </div>
+
+              <div className="mt-5 border-t border-stone-100 pt-5">
+                <VersionHistorySection memoId={id} />
+              </div>
             </Card>
 
             <Card padded={false}>
@@ -223,6 +229,11 @@ function MemoDetail() {
               <div className="mt-3">
                 <WorkflowTimeline steps={workflowSteps} />
               </div>
+            </Card>
+
+            {/* Stage 13b scaffolding — plain by design, see ActionLogSection. */}
+            <Card>
+              <ActionLogSection memoId={id} />
             </Card>
 
             {isCurrentApprover && <ApprovalActions memoId={id} onActionComplete={fetchAll} />}
