@@ -10,7 +10,7 @@ jest.mock('../src/config/supabaseClient', () => {
   const mockStorage = require('./supabaseStorageMock');
   return {
     getSupabaseClient: () => mockStorage.client,
-    SUPABASE_BUCKET: 'test-bucket',
+    getSupabaseBucket: () => 'test-bucket',
   };
 });
 

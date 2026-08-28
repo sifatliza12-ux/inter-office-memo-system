@@ -6,7 +6,7 @@ const Memo = require('../models/Memo');
 const WorkflowStep = require('../models/WorkflowStep');
 const ApiError = require('../utils/ApiError');
 const { logAuditEvent } = require('./audit.service');
-const { getSupabaseClient, SUPABASE_BUCKET } = require('../config/supabaseClient');
+const { getSupabaseClient, getSupabaseBucket } = require('../config/supabaseClient');
 
 // Each allowed extension maps to the mimetype we record and the magic-byte
 // signature its actual file content must start with — the client-supplied
@@ -103,8 +103,9 @@ const uploadAttachment = async (organizationId, memoId, requestingUserId, file) 
   const storedFilename = `${organizationId}/${memo._id}/${crypto.randomUUID()}.${detected.ext}`;
 
   const supabase = getSupabaseClient();
+  const bucket = getSupabaseBucket();
   const { error: uploadError } = await supabase.storage
-    .from(SUPABASE_BUCKET)
+    .from(bucket)
     .upload(storedFilename, file.buffer, { contentType: detected.mimetype, upsert: false });
   if (uploadError) {
     throw new ApiError(502, `Failed to upload attachment to storage: ${uploadError.message}`);
@@ -123,7 +124,7 @@ const uploadAttachment = async (organizationId, memoId, requestingUserId, file) 
     });
   } catch (error) {
     // Don't leave an orphaned object in storage if the DB record failed.
-    await supabase.storage.from(SUPABASE_BUCKET).remove([storedFilename]).catch(() => {});
+    await supabase.storage.from(bucket).remove([storedFilename]).catch(() => {});
     throw error;
   }
 
@@ -169,7 +170,7 @@ const getAttachmentForDownload = async (organizationId, memoId, attachmentId, re
   }
 
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase.storage.from(SUPABASE_BUCKET).download(attachment.storedFilename);
+  const { data, error } = await supabase.storage.from(getSupabaseBucket()).download(attachment.storedFilename);
   if (error || !data) {
     throw new ApiError(502, `Failed to retrieve attachment from storage: ${error?.message || 'not found'}`);
   }
@@ -202,7 +203,7 @@ const deleteAttachment = async (organizationId, memoId, attachmentId, requesting
   });
 
   const supabase = getSupabaseClient();
-  const { error } = await supabase.storage.from(SUPABASE_BUCKET).remove([attachment.storedFilename]);
+  const { error } = await supabase.storage.from(getSupabaseBucket()).remove([attachment.storedFilename]);
   if (error) {
     // eslint-disable-next-line no-console
     console.error('Failed to remove attachment object from storage:', error);

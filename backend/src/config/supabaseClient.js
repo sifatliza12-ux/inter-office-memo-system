@@ -1,7 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
 
-const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'memo-attachments';
-
 let client;
 
 // Lazily created and memoized, unlike db.js's connectDB (which the whole
@@ -35,4 +33,18 @@ const getSupabaseClient = () => {
   return client;
 };
 
-module.exports = { getSupabaseClient, SUPABASE_BUCKET };
+// No hardcoded fallback (e.g. 'memo-attachments') — same reasoning as
+// SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY above: a silently-wrong default
+// bucket name in production is worse than a clear failure right at the
+// point of use. Called lazily by attachment.service.js alongside
+// getSupabaseClient(), not read once at module load, for the same
+// "don't force this to be set just to start the server" reason.
+const getSupabaseBucket = () => {
+  const bucket = process.env.SUPABASE_BUCKET;
+  if (!bucket) {
+    throw new Error('SUPABASE_BUCKET must be set to use attachment storage');
+  }
+  return bucket;
+};
+
+module.exports = { getSupabaseClient, getSupabaseBucket };

@@ -7,7 +7,11 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
-app.use(cors({ origin: process.env.CLIENT_URL || '*' }));
+// CLIENT_URL is the deployed frontend's origin in production (e.g. the
+// Vercel URL) — falls back to the local Vite dev server, never to a
+// wildcard, since this API is meant to be reachable only by one known
+// frontend.
+app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
