@@ -1,7 +1,3 @@
-import { useCallback, useEffect, useState } from 'react';
-
-import { getWorkflowActions } from '../services/workflow';
-import { getMemoVersions } from '../services/memos';
 import { ActionBadge } from './ui/Badge.jsx';
 import LoadingSpinner from './ui/LoadingSpinner.jsx';
 import EmptyState from './ui/EmptyState.jsx';
@@ -41,6 +37,9 @@ function VersionMarker({ versionNumber, version, isLast }) {
   );
 }
 
+// Rich entry: event name first (what happened), then when, then who, then
+// any further detail (recipient/comment) — "what → when → who" rather than
+// the flatter name+badge row this replaced.
 function ActionEntry({ action, isLast }) {
   const minor = MINOR_ACTIONS.has(action.action);
   const connector = CONNECTOR_RING[action.action] || 'bg-stone-400 ring-stone-100';
@@ -55,58 +54,74 @@ function ActionEntry({ action, isLast }) {
         {!isLast && <span className="mt-1 w-px flex-1 bg-stone-200" aria-hidden="true" />}
       </div>
       <div className={`flex-1 pb-1 ${minor ? 'opacity-80' : ''}`}>
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-          <span className={`font-medium ${minor ? 'text-sm text-stone-600' : 'text-sm text-stone-800'}`}>
-            {action.actor?.name || 'Unknown'}
-          </span>
-          <ActionBadge action={action.action} />
-        </div>
+        <ActionBadge action={action.action} className={minor ? 'text-xs' : 'text-sm font-semibold'} />
+        <p className="mt-1 text-xs text-stone-400">{new Date(action.createdAt).toLocaleString()}</p>
+        <p className="mt-1 text-sm text-stone-700">{action.actor?.name || 'Unknown'}</p>
         {action.recipient?.name && (
           <p className="mt-0.5 text-sm text-stone-500">
             &rarr; sent to <span className="font-medium text-stone-700">{action.recipient.name}</span>
           </p>
         )}
         {action.comment && <p className="mt-1 text-sm italic text-stone-600">&ldquo;{action.comment}&rdquo;</p>}
-        <p className="mt-0.5 text-xs text-stone-400">{new Date(action.createdAt).toLocaleString()}</p>
       </div>
     </li>
   );
 }
 
-// Unified "Memo History" timeline (Stage 13d) — replaces the three
-// previously-separate sections (WorkflowTimeline, VersionHistorySection,
-// ActionLogSection) with one view built from GET /api/memos/:id/actions
-// (Stage 13b/13c) and GET /api/memos/:id/versions (Stage 13a) together.
-// Both endpoints already enforce view-authorization server-side; a 403/404
-// here surfaces the same way any other memo fetch error already does on
-// this page.
-function MemoHistoryTimeline({ memoId }) {
-  const [actions, setActions] = useState([]);
-  const [versions, setVersions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+// Synthetic node representing the current pending step — sourced entirely
+// from workflowSteps (already fetched by the parent alongside memo/actions,
+// no new query). WorkflowAction only ever records things that HAVE
+// happened, so there is no "awaiting approval" action to render otherwise;
+// this is the one place this timeline shows something that hasn't happened
+// yet, distinguished with an outlined (not filled) dot and a pulse.
+function CurrentStepEntry({ step, isLast }) {
+  return (
+    <li className="relative flex gap-3">
+      <div className="flex flex-col items-center">
+        <span className="relative z-10 mt-1 flex h-2.5 w-2.5 shrink-0" aria-hidden="true">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-60" />
+          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-blue-500 ring-4 ring-blue-100" />
+        </span>
+        {!isLast && <span className="mt-1 w-px flex-1 bg-stone-200" aria-hidden="true" />}
+      </div>
+      <div className="flex-1 pb-1">
+        <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-700">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" aria-hidden="true" />
+          Awaiting action
+        </span>
+        <p className="mt-1 text-sm text-stone-700">{step.userId?.name || 'Unknown'}</p>
+      </div>
+    </li>
+  );
+}
 
-  const fetchHistory = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const [actionsResponse, versionsResponse] = await Promise.all([
-        getWorkflowActions(memoId),
-        getMemoVersions(memoId),
-      ]);
-      setActions(actionsResponse.data.actions);
-      setVersions(versionsResponse.data.versions);
-    } catch (fetchError) {
-      setError(fetchError.response?.data?.message || 'Failed to load memo history');
-    } finally {
-      setLoading(false);
-    }
-  }, [memoId]);
+// Future, not-yet-reached participants — muted/outlined, clearly distinct
+// from both completed (filled, colored) and current (pulsing) entries.
+function FutureStepEntry({ step, isLast }) {
+  return (
+    <li className="relative flex gap-3">
+      <div className="flex flex-col items-center">
+        <span
+          className="z-10 mt-1 h-2.5 w-2.5 shrink-0 rounded-full border-2 border-stone-300 bg-white"
+          aria-hidden="true"
+        />
+        {!isLast && <span className="mt-1 w-px flex-1 bg-stone-200" aria-hidden="true" />}
+      </div>
+      <div className="flex-1 pb-1 opacity-70">
+        <span className="text-sm font-medium text-stone-500">Upcoming</span>
+        <p className="mt-1 text-sm text-stone-500">{step.userId?.name || 'Unknown'}</p>
+      </div>
+    </li>
+  );
+}
 
-  useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
-
+// Unified "Memo History" timeline (Stage 13d), refined for Stage 3's rich
+// workflow timeline. Built entirely from data the parent (MemoDetail) has
+// already fetched via GET /api/memos/:id/actions, GET /api/memos/:id/versions,
+// and GET /api/memos/:id/workflow — no new data source or query, and no
+// separate loading/fetch effect of its own anymore (the parent's single
+// page-level load covers all of it).
+function MemoHistoryTimeline({ actions, versions, workflowSteps, loading, error }) {
   if (loading) {
     return <LoadingSpinner label="Loading history..." className="justify-start" />;
   }
@@ -115,7 +130,10 @@ function MemoHistoryTimeline({ memoId }) {
     return <p className="text-sm text-red-600">{error}</p>;
   }
 
-  if (actions.length === 0) {
+  const pendingSteps = (workflowSteps || []).filter((step) => step.status === 'pending');
+  const [currentStep, ...futureSteps] = pendingSteps;
+
+  if (actions.length === 0 && !currentStep) {
     return <EmptyState title="No history yet" message="This memo has not been submitted yet." />;
   }
 
@@ -123,9 +141,7 @@ function MemoHistoryTimeline({ memoId }) {
   // stream's versionNumber changes from the previous action — including
   // before the very first action, so a plain memo that never used any
   // Stage 13c feature still shows a clear "Version 1 created" lead-in
-  // rather than starting mid-story. version metadata (createdAt) is looked
-  // up from the versions endpoint; the marker still renders correctly if
-  // that lookup ever comes up empty.
+  // rather than starting mid-story.
   const versionByNumber = new Map(versions.map((version) => [version.versionNumber, version]));
   const items = [];
   let lastVersionNumber = null;
@@ -136,21 +152,32 @@ function MemoHistoryTimeline({ memoId }) {
     }
     items.push({ kind: 'action', action });
   });
+  if (currentStep) {
+    items.push({ kind: 'current', step: currentStep });
+  }
+  futureSteps.forEach((step) => items.push({ kind: 'future', step }));
 
   return (
     <ol className="space-y-4">
       {items.map((item, index) => {
         const isLast = index === items.length - 1;
-        return item.kind === 'version' ? (
-          <VersionMarker
-            key={`version-${item.versionNumber}`}
-            versionNumber={item.versionNumber}
-            version={versionByNumber.get(item.versionNumber)}
-            isLast={isLast}
-          />
-        ) : (
-          <ActionEntry key={item.action._id} action={item.action} isLast={isLast} />
-        );
+        if (item.kind === 'version') {
+          return (
+            <VersionMarker
+              key={`version-${item.versionNumber}`}
+              versionNumber={item.versionNumber}
+              version={versionByNumber.get(item.versionNumber)}
+              isLast={isLast}
+            />
+          );
+        }
+        if (item.kind === 'current') {
+          return <CurrentStepEntry key={`current-${item.step._id}`} step={item.step} isLast={isLast} />;
+        }
+        if (item.kind === 'future') {
+          return <FutureStepEntry key={`future-${item.step._id}`} step={item.step} isLast={isLast} />;
+        }
+        return <ActionEntry key={item.action._id} action={item.action} isLast={isLast} />;
       })}
     </ol>
   );

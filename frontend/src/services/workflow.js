@@ -23,6 +23,12 @@ export const declineRedirectMemo = (memoId, userId, comment) =>
 export const removeWorkflowParticipant = (memoId, userId, reason) =>
   api.post(`/memos/${memoId}/workflow/remove-participant`, { userId, reason });
 
+// Pre-Stage-3: self-only descriptive metadata on the caller's own
+// WorkflowStep. Passing '' clears the label (the backend normalizes empty/
+// whitespace-only to null) — never send undefined, which the backend would
+// instead treat as "field omitted" (also clears, but let's always be explicit).
+export const setMyRoleLabel = (memoId, roleLabel) => api.patch(`/memos/${memoId}/workflow/role`, { roleLabel });
+
 // Stage 13b: the new general event-log endpoint, separate from
 // getWorkflow above — scaffolding for Stage 13d's unified timeline.
 export const getWorkflowActions = (memoId) => api.get(`/memos/${memoId}/actions`);

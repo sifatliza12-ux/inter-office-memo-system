@@ -1,42 +1,81 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
-import { getMemo, deleteMemo, submitMemo, exportMemoPdf } from '../services/memos';
-import { getWorkflow, resubmitMemo } from '../services/workflow';
+import { getMemo, deleteMemo, submitMemo, exportMemoPdf, getMemoVersions } from '../services/memos';
+import { getWorkflow, resubmitMemo, getWorkflowActions } from '../services/workflow';
 import { getDirectory } from '../services/directory';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useToast } from '../context/ToastContext.jsx';
 import ApprovalActions from '../components/ApprovalActions.jsx';
-import AddParticipantControl from '../components/AddParticipantControl.jsx';
-import RemoveParticipantControl from '../components/RemoveParticipantControl.jsx';
+import ParticipantWorkspace from '../components/ParticipantWorkspace.jsx';
 import MemoHistoryTimeline from '../components/MemoHistoryTimeline.jsx';
-import CommentsSection from '../components/CommentsSection.jsx';
+import MemoMetadataBar from '../components/MemoMetadataBar.jsx';
+import ActivitySection from '../components/ActivitySection.jsx';
 import AttachmentsSection from '../components/AttachmentsSection.jsx';
 import AppShell from '../components/AppShell.jsx';
 import Card from '../components/ui/Card.jsx';
 import Button from '../components/ui/Button.jsx';
-import { StatusBadge } from '../components/ui/Badge.jsx';
-import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
+import Skeleton from '../components/ui/Skeleton.jsx';
+import OverflowMenu from '../components/ui/OverflowMenu.jsx';
+
+function MemoDetailSkeleton() {
+  return (
+    <AppShell>
+      <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-7 w-72 max-w-full" />
+          </div>
+          <Skeleton className="h-8 w-28 rounded-lg" />
+        </div>
+        <Skeleton className="h-20 w-full rounded-xl" />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <Skeleton className="h-64 w-full rounded-xl" />
+          </div>
+          <div className="space-y-6">
+            <Skeleton className="h-16 w-full rounded-xl" />
+            <Skeleton className="h-40 w-full rounded-xl" />
+            <Skeleton className="h-32 w-full rounded-xl" />
+          </div>
+        </div>
+      </div>
+    </AppShell>
+  );
+}
 
 function MemoDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
+  const toast = useToast();
 
   const [memo, setMemo] = useState(null);
   const [workflowSteps, setWorkflowSteps] = useState([]);
+  const [actions, setActions] = useState([]);
+  const [versions, setVersions] = useState([]);
   const [directory, setDirectory] = useState({ users: [], departments: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setError('');
     try {
-      const [memoResponse, workflowResponse] = await Promise.all([getMemo(id), getWorkflow(id)]);
+      const [memoResponse, workflowResponse, actionsResponse, versionsResponse] = await Promise.all([
+        getMemo(id),
+        getWorkflow(id),
+        getWorkflowActions(id),
+        getMemoVersions(id),
+      ]);
       setMemo(memoResponse.data.memo);
       setWorkflowSteps(workflowResponse.data.workflowSteps);
+      setActions(actionsResponse.data.actions);
+      setVersions(versionsResponse.data.versions);
     } catch (fetchError) {
       setError(fetchError.response?.data?.message || 'Failed to load memo');
     }
@@ -61,9 +100,12 @@ function MemoDetail() {
     setBusy(true);
     try {
       await deleteMemo(id);
+      toast.success('Memo deleted');
       navigate('/memos');
     } catch (deleteError) {
-      setActionError(deleteError.response?.data?.message || 'Failed to delete memo');
+      const message = deleteError.response?.data?.message || 'Failed to delete memo';
+      setActionError(message);
+      toast.error(message);
     } finally {
       setBusy(false);
     }
@@ -74,9 +116,12 @@ function MemoDetail() {
     setBusy(true);
     try {
       await submitMemo(id);
+      toast.success('Memo submitted for approval');
       await fetchAll();
     } catch (submitError) {
-      setActionError(submitError.response?.data?.message || 'Failed to submit memo');
+      const message = submitError.response?.data?.message || 'Failed to submit memo';
+      setActionError(message);
+      toast.error(message);
     } finally {
       setBusy(false);
     }
@@ -88,7 +133,9 @@ function MemoDetail() {
     try {
       await exportMemoPdf(id, memo.referenceNumber);
     } catch (exportError) {
-      setActionError(exportError.response?.data?.message || 'Failed to export PDF');
+      const message = exportError.response?.data?.message || 'Failed to export PDF';
+      setActionError(message);
+      toast.error(message);
     } finally {
       setExporting(false);
     }
@@ -99,20 +146,19 @@ function MemoDetail() {
     setBusy(true);
     try {
       await resubmitMemo(id);
+      toast.success('Memo resubmitted for approval');
       await fetchAll();
     } catch (resubmitError) {
-      setActionError(resubmitError.response?.data?.message || 'Failed to resubmit memo');
+      const message = resubmitError.response?.data?.message || 'Failed to resubmit memo';
+      setActionError(message);
+      toast.error(message);
     } finally {
       setBusy(false);
     }
   };
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-stone-50">
-        <LoadingSpinner label="Loading..." />
-      </div>
-    );
+    return <MemoDetailSkeleton />;
   }
 
   if (error) {
@@ -132,28 +178,15 @@ function MemoDetail() {
   const isChangesRequested = memo.status === 'changes_requested';
   const isCurrentApprover = memo.status === 'submitted' && memo.currentApproverId === currentUserId;
   const isAnyParticipant = workflowSteps.some((step) => (step.userId?._id || step.userId) === currentUserId);
-  const canAddParticipant = isAnyParticipant && memo.status === 'submitted';
-  // Same visibility rule as canAddParticipant above (Stage 5) — any
-  // WorkflowStep holder, past/current/future. Candidates are restricted to
-  // still-pending, not-yet-reached participants: never the current holder
-  // (redirect handles that case), never someone whose step was already
-  // acted on.
-  const removableCandidates = workflowSteps
-    .filter((step) => step.status === 'pending')
-    .filter((step) => (step.userId?._id || step.userId) !== memo.currentApproverId)
-    .map((step) => ({ _id: step.userId?._id || step.userId, name: step.userId?.name || 'Unknown' }));
+  const canManageParticipants = isAnyParticipant && memo.status === 'submitted';
   // Matches the backend's comment authorization exactly (author, or anyone
   // with a WorkflowStep regardless of status) — deliberately not the same
-  // as canAddParticipant above, which also requires status === 'submitted'.
-  // Comments have no such restriction: they're allowed on approved/rejected
-  // memos too, and for an author who never became a participant themselves.
+  // as canManageParticipants above, which also requires status === 'submitted'.
   const canComment = isAuthor || isAnyParticipant;
 
   const metaItems = [
     { label: 'Priority', value: <span className="capitalize">{memo.priority}</span> },
     { label: 'Category', value: memo.category },
-    { label: 'Department', value: departmentName(memo.departmentId) || 'None' },
-    { label: 'Author', value: userName(memo.authorId) },
     { label: 'Created', value: new Date(memo.createdAt).toLocaleString() },
     { label: 'Updated', value: new Date(memo.updatedAt).toLocaleString() },
   ];
@@ -187,15 +220,83 @@ function MemoDetail() {
           </div>
         </div>
 
+        <MemoMetadataBar memo={memo} fromLabel={userName(memo.authorId)} toLabel={departmentName(memo.departmentId)} />
+
         {actionError && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{actionError}</p>}
 
-        {/* A flat grid rather than two nested column wrappers, so mobile
-            stacking order (content → actions → status/workflow → secondary
-            attachments/comments) can differ from the desktop 2/3 + 1/3
-            column layout — each item's position is set independently via
-            `order` (mobile) and `lg:col-start`/`lg:row-start` (desktop). */}
+        {/* Workspace split (desktop): left = document workspace (content,
+            attachments, activity/discussion); right = workflow/context
+            workspace (contextual actions, workflow timeline, participants).
+            Mobile reflows into a single stack via `order`, matching Section
+            11's simple-stack spec (actions near status, then content, then
+            workflow, then participants, then activity, then attachments) —
+            independently of the desktop `lg:col-start`/`lg:row-start`
+            placement, exactly like Stage 2's existing MemoDetail grid. */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <Card className="order-1 lg:order-none lg:col-span-2 lg:row-start-1">
+          <div className="order-1 lg:order-none lg:col-start-3 lg:row-start-1">
+            {isCurrentApprover && <ApprovalActions memoId={id} users={directory.users} onActionComplete={fetchAll} />}
+
+            {isDraft && isAuthor && (
+              <Card>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="primary" size="sm" onClick={handleSubmit} disabled={busy}>
+                    Submit
+                  </Button>
+                  <Link to={`/memos/${id}/edit`}>
+                    <Button variant="outline" size="sm">
+                      Edit
+                    </Button>
+                  </Link>
+                  <div className="ml-auto">
+                    <OverflowMenu label="More actions">
+                      {!confirmDelete ? (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDelete(true)}
+                          className="text-sm font-medium text-red-600 hover:underline"
+                        >
+                          Delete memo
+                        </button>
+                      ) : (
+                        <div className="space-y-2">
+                          <p className="text-sm text-stone-600">Delete this memo permanently?</p>
+                          <div className="flex gap-2">
+                            <Button variant="danger" size="sm" disabled={busy} onClick={handleDelete}>
+                              Yes, delete
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </OverflowMenu>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {isChangesRequested && isAuthor && (
+              <Card className="flex flex-wrap gap-2">
+                <Button variant="primary" size="sm" onClick={handleResubmit} disabled={busy}>
+                  Resubmit
+                </Button>
+                <Link to={`/memos/${id}/edit`}>
+                  <Button variant="outline" size="sm">
+                    Edit
+                  </Button>
+                </Link>
+              </Card>
+            )}
+
+            {!isDraft && !isChangesRequested && !isCurrentApprover && (
+              <Card className="bg-stone-50/60">
+                <p className="text-sm text-stone-400">This memo is read-only for you at this stage.</p>
+              </Card>
+            )}
+          </div>
+
+          <Card className="order-2 lg:order-none lg:col-span-2 lg:row-start-1">
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
               {metaItems.map((item) => (
                 <div key={item.label}>
@@ -207,82 +308,37 @@ function MemoDetail() {
 
             <div className="mt-5 border-t border-stone-100 pt-5">
               <p className="text-sm font-medium text-stone-700">Body</p>
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-stone-800">{memo.body}</p>
+              <p className="mt-2 max-w-[70ch] whitespace-pre-wrap text-sm leading-relaxed text-stone-800">{memo.body}</p>
             </div>
           </Card>
 
-          {/* Status, workflow, and actions — ranked ahead of attachments/
-              comments on mobile, alongside them on desktop. */}
-          <div className="order-2 space-y-6 lg:order-none lg:col-start-3 lg:row-span-2 lg:row-start-1">
-            <Card>
-              <p className="text-xs font-medium uppercase tracking-wide text-stone-400">Current status</p>
-              <div className="mt-1.5">
-                <StatusBadge status={memo.status} className="text-base" />
-              </div>
-            </Card>
+          <Card className="order-3 lg:order-none lg:col-start-3 lg:row-start-2">
+            <p className="text-sm font-semibold text-stone-800">Workflow</p>
+            <div className="mt-3">
+              <MemoHistoryTimeline actions={actions} versions={versions} workflowSteps={workflowSteps} loading={false} error="" />
+            </div>
+          </Card>
 
-            <Card>
-              <p className="text-sm font-medium text-stone-700">Memo History</p>
-              <div className="mt-3">
-                <MemoHistoryTimeline memoId={id} />
-              </div>
-            </Card>
-
-            {isCurrentApprover && <ApprovalActions memoId={id} users={directory.users} onActionComplete={fetchAll} />}
-
-            {canAddParticipant && (
-              <AddParticipantControl
-                memoId={id}
-                users={directory.users}
-                existingParticipantIds={memo.workflowParticipants}
-                onActionComplete={fetchAll}
-              />
-            )}
-
-            {canAddParticipant && (
-              <RemoveParticipantControl memoId={id} candidates={removableCandidates} onActionComplete={fetchAll} />
-            )}
-
-            {isDraft && isAuthor && (
-              <Card className="flex flex-wrap gap-2">
-                <Link to={`/memos/${id}/edit`}>
-                  <Button variant="secondary" size="sm">
-                    Edit
-                  </Button>
-                </Link>
-                <Button variant="primary" size="sm" onClick={handleSubmit} disabled={busy}>
-                  Submit
-                </Button>
-                <Button variant="danger" size="sm" onClick={handleDelete} disabled={busy}>
-                  Delete
-                </Button>
-              </Card>
-            )}
-
-            {isChangesRequested && isAuthor && (
-              <Card className="flex flex-wrap gap-2">
-                <Link to={`/memos/${id}/edit`}>
-                  <Button variant="secondary" size="sm">
-                    Edit
-                  </Button>
-                </Link>
-                <Button variant="primary" size="sm" onClick={handleResubmit} disabled={busy}>
-                  Resubmit
-                </Button>
-              </Card>
-            )}
-
-            {!isDraft && !isChangesRequested && !isCurrentApprover && !canAddParticipant && (
-              <p className="text-sm text-stone-500">This memo is read-only for you at this stage.</p>
-            )}
+          <div className="order-4 lg:order-none lg:col-start-3 lg:row-start-3">
+            <ParticipantWorkspace
+              memo={memo}
+              workflowSteps={workflowSteps}
+              directory={directory}
+              currentUserId={currentUserId}
+              canManage={canManageParticipants}
+              onActionComplete={fetchAll}
+            />
           </div>
 
-          <Card padded={false} className="order-3 lg:order-none lg:col-span-2 lg:row-start-2">
-            <div className="border-b border-stone-100 px-5 py-4 sm:px-6">
+          <Card padded={false} className="order-6 lg:order-none lg:col-span-2 lg:row-start-2">
+            <div className="px-5 py-4 sm:px-6">
               <AttachmentsSection memoId={id} canUpload={canComment} currentUserId={currentUserId} isAuthor={isAuthor} />
             </div>
+          </Card>
+
+          <Card padded={false} className="order-5 lg:order-none lg:col-span-2 lg:row-start-3">
             <div className="px-5 py-4 sm:px-6">
-              <CommentsSection memoId={id} canComment={canComment} />
+              <ActivitySection memoId={id} canComment={canComment} actions={actions} />
             </div>
           </Card>
         </div>

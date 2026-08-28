@@ -1,15 +1,27 @@
 import { useState } from 'react';
 
 import { approveMemo, rejectMemo, requestChanges, redirectMemo, declineRedirectMemo } from '../services/workflow';
+import { useToast } from '../context/ToastContext.jsx';
 import Card from './ui/Card.jsx';
 import Button from './ui/Button.jsx';
 import Textarea from './ui/Textarea.jsx';
 import Select from './ui/Select.jsx';
+import OverflowMenu from './ui/OverflowMenu.jsx';
 import { CheckIcon } from './icons.jsx';
 
 const SUCCESS_DELAY_MS = 450;
 
+// Action hierarchy per Stage 3 spec: Approve is primary (strongest),
+// Request Changes secondary, Reject destructive-but-restrained (outline,
+// not solid), and Redirect / Decline & Redirect — the least common pair —
+// live in the "More actions" overflow menu. Every action below still calls
+// the exact same service function, with the exact same arguments, as
+// before this restructuring: approveMemo(memoId, comment||undefined),
+// rejectMemo(memoId, comment), requestChanges(memoId, comment),
+// redirectMemo(memoId, userId, comment), declineRedirectMemo(memoId,
+// userId, comment) — only the visual layout changed.
 function ApprovalActions({ memoId, users, onActionComplete }) {
+  const toast = useToast();
   const [comment, setComment] = useState('');
   const [redirectTarget, setRedirectTarget] = useState('');
   const [error, setError] = useState('');
@@ -28,12 +40,15 @@ function ApprovalActions({ memoId, users, onActionComplete }) {
       await action();
       setComment('');
       if (label) {
+        toast.success(label);
         setSuccessLabel(label);
         await new Promise((resolve) => setTimeout(resolve, SUCCESS_DELAY_MS));
       }
       await onActionComplete();
     } catch (actionError) {
-      setError(actionError.response?.data?.message || 'That action failed');
+      const message = actionError.response?.data?.message || 'That action failed';
+      setError(message);
+      toast.error(message);
       setBusy(false);
     }
   };
@@ -67,7 +82,43 @@ function ApprovalActions({ memoId, users, onActionComplete }) {
 
   return (
     <Card className="border-plum-200 bg-plum-50/60">
-      <p className="text-sm font-medium text-plum-900">It is your turn to act on this memo.</p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-medium text-plum-900">It is your turn to act on this memo.</p>
+        <OverflowMenu label="More actions">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">Redirect to someone specific</p>
+          <Select value={redirectTarget} onChange={(event) => setRedirectTarget(event.target.value)} className="!py-1.5 text-sm">
+            <option value="">Select a user...</option>
+            {users.map((user) => (
+              <option key={user._id} value={user._id}>
+                {user.name} ({user.email})
+              </option>
+            ))}
+          </Select>
+          <p className="mt-2 text-xs text-stone-400">Uses the comment field below — required for both options here.</p>
+          <div className="mt-2 flex flex-col gap-1.5">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={() => runRedirectAction(redirectMemo, 'Redirected')}
+              className="w-full justify-center"
+            >
+              Redirect to...
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={() => runRedirectAction(declineRedirectMemo, 'Declined & Redirected')}
+              className="w-full justify-center"
+            >
+              Decline &amp; Redirect to...
+            </Button>
+          </div>
+        </OverflowMenu>
+      </div>
 
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
 
@@ -77,7 +128,7 @@ function ApprovalActions({ memoId, users, onActionComplete }) {
           value={comment}
           onChange={(event) => setComment(event.target.value)}
           rows={2}
-          placeholder="Optional for Approve; required for Reject, Request Changes, Redirect, and Decline & Redirect"
+          placeholder="Optional for Approve — required for every other action"
         />
       </div>
 
@@ -104,45 +155,14 @@ function ApprovalActions({ memoId, users, onActionComplete }) {
         </Button>
         <Button
           type="button"
-          variant="danger"
+          variant="outline"
           size="sm"
+          className="border-red-200 text-red-700 hover:border-red-300 hover:bg-red-50 focus-visible:ring-red-200"
           disabled={busy}
           onClick={() => runAction(() => rejectMemo(memoId, comment), 'Rejected')}
         >
           Reject
         </Button>
-      </div>
-
-      <div className="mt-4 border-t border-stone-200 pt-3">
-        <label className="mb-1 block text-sm font-medium text-stone-700">Redirect / Decline &amp; Redirect target</label>
-        <Select value={redirectTarget} onChange={(event) => setRedirectTarget(event.target.value)}>
-          <option value="">Select a user...</option>
-          {users.map((user) => (
-            <option key={user._id} value={user._id}>
-              {user.name} ({user.email})
-            </option>
-          ))}
-        </Select>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={busy}
-            onClick={() => runRedirectAction(redirectMemo, 'Redirected')}
-          >
-            Redirect to...
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={busy}
-            onClick={() => runRedirectAction(declineRedirectMemo, 'Declined & Redirected')}
-          >
-            Decline &amp; Redirect to...
-          </Button>
-        </div>
       </div>
     </Card>
   );

@@ -164,3 +164,56 @@ export function BuildingIcon(props) {
     </svg>
   );
 }
+
+export function PlusIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+export function PencilIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M16.5 4.5 19.5 7.5 8 19H5v-3L16.5 4.5Z" />
+    </svg>
+  );
+}
+
+export function PaperclipIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M8 12.5 15 5.4a3 3 0 0 1 4.2 4.2L11 17.8a5 5 0 0 1-7-7L12.5 2.4" />
+    </svg>
+  );
+}
+
+export function DownloadIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 3.5v11M8 11l4 4 4-4" />
+      <path d="M5 17.5v1.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1.5" />
+    </svg>
+  );
+}
+
+export function AlertIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 3.5 21 19.5H3L12 3.5Z" />
+      <path d="M12 10v4" />
+      <circle cx="12" cy="16.8" r="0.9" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function MoreIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="6" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="18" r="1.1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
