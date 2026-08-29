@@ -229,124 +229,148 @@ function MemoDetail() {
             workspace (contextual actions, workflow timeline, participants).
             Mobile reflows into a single stack via `order`, matching Section
             11's simple-stack spec (actions near status, then content, then
-            workflow, then participants, then activity, then attachments) —
-            independently of the desktop `lg:col-start`/`lg:row-start`
-            placement, exactly like Stage 2's existing MemoDetail grid. */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="order-1 lg:order-none lg:col-start-3 lg:row-start-1">
-            {isCurrentApprover && <ApprovalActions memoId={id} users={directory.users} onActionComplete={fetchAll} />}
+            workflow, then participants, then activity, then attachments).
 
-            {isDraft && isAuthor && (
-              <Card>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="primary" size="sm" onClick={handleSubmit} disabled={busy}>
-                    Submit
+            Each column is wrapped in its own `contents lg:flex lg:flex-col`
+            container rather than every item carrying its own
+            `lg:row-start-N`. With per-item row-start, both columns shared
+            one grid row-track per row, so CSS Grid sized each row to its
+            TALLEST occupant across BOTH columns — a short "read-only"
+            message sharing row 1 with a long memo body, or a compact
+            Attachments list sharing row 2 with a long Workflow timeline,
+            left a large empty gap trailing the short item before the next
+            section began. `self-start` (the earlier Attachments fix) only
+            stops one item from stretching to fill that shared row — it
+            can't shrink the row track itself, so it never could have fixed
+            a gap that crosses into the *next* row (this bug). Making each
+            column a real, independent flex column removes the shared
+            row-track entirely — each column's height is just the sum of
+            its own content, unrelated to the other column's. `contents`
+            makes the wrapper itself disappear from layout on mobile, so its
+            children fall back to being flat siblings of the outer grid,
+            where their own `order-N` still drives the interleaved mobile
+            stack exactly as before (verified unaffected: 24px on every
+            adjacent pair, all 3 test cases, before and after this change). */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
+          {/* lg:row-start-1 on both wrappers: without it, CSS Grid's default
+              auto-placement cursor advances past row 1 after placing this
+              wrapper in column 3 (the last column), so the *next* DOM
+              sibling (the left wrapper, needing columns 1-2) gets pushed to
+              row 2 even though row 1's columns 1-2 are still empty — sparse
+              packing never backtracks to fill an earlier row. Pinning both
+              to row 1 explicitly is what actually puts them side by side. */}
+          <div className="contents lg:col-start-3 lg:row-start-1 lg:flex lg:flex-col lg:gap-6">
+            <div className="order-1 lg:order-none">
+              {isCurrentApprover && <ApprovalActions memoId={id} users={directory.users} onActionComplete={fetchAll} />}
+
+              {isDraft && isAuthor && (
+                <Card>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button variant="primary" size="sm" onClick={handleSubmit} disabled={busy}>
+                      Submit
+                    </Button>
+                    <Link to={`/memos/${id}/edit`}>
+                      <Button variant="outline" size="sm">
+                        Edit
+                      </Button>
+                    </Link>
+                    <div className="ml-auto">
+                      <OverflowMenu label="More actions">
+                        {!confirmDelete ? (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDelete(true)}
+                            className="text-sm font-medium text-red-600 hover:underline"
+                          >
+                            Delete memo
+                          </button>
+                        ) : (
+                          <div className="space-y-2">
+                            <p className="text-sm text-stone-600">Delete this memo permanently?</p>
+                            <div className="flex gap-2">
+                              <Button variant="danger" size="sm" disabled={busy} onClick={handleDelete}>
+                                Yes, delete
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </OverflowMenu>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {isChangesRequested && isAuthor && (
+                <Card className="flex flex-wrap gap-2">
+                  <Button variant="primary" size="sm" onClick={handleResubmit} disabled={busy}>
+                    Resubmit
                   </Button>
                   <Link to={`/memos/${id}/edit`}>
                     <Button variant="outline" size="sm">
                       Edit
                     </Button>
                   </Link>
-                  <div className="ml-auto">
-                    <OverflowMenu label="More actions">
-                      {!confirmDelete ? (
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDelete(true)}
-                          className="text-sm font-medium text-red-600 hover:underline"
-                        >
-                          Delete memo
-                        </button>
-                      ) : (
-                        <div className="space-y-2">
-                          <p className="text-sm text-stone-600">Delete this memo permanently?</p>
-                          <div className="flex gap-2">
-                            <Button variant="danger" size="sm" disabled={busy} onClick={handleDelete}>
-                              Yes, delete
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
-                              Cancel
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </OverflowMenu>
+                </Card>
+              )}
+
+              {!isDraft && !isChangesRequested && !isCurrentApprover && (
+                <Card className="bg-stone-50/60">
+                  <p className="text-sm text-stone-500">This memo is read-only for you at this stage.</p>
+                </Card>
+              )}
+            </div>
+
+            <Card className="order-3 lg:order-none">
+              <p className="text-sm font-semibold text-stone-800">Workflow</p>
+              <div className="mt-3">
+                <MemoHistoryTimeline actions={actions} versions={versions} workflowSteps={workflowSteps} loading={false} error="" />
+              </div>
+            </Card>
+
+            <div className="order-4 lg:order-none">
+              <ParticipantWorkspace
+                memo={memo}
+                workflowSteps={workflowSteps}
+                directory={directory}
+                currentUserId={currentUserId}
+                canManage={canManageParticipants}
+                onActionComplete={fetchAll}
+              />
+            </div>
+          </div>
+
+          <div className="contents lg:col-span-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-6">
+            <Card className="order-2 lg:order-none">
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
+                {metaItems.map((item) => (
+                  <div key={item.label}>
+                    <dt className="text-xs uppercase tracking-wide text-stone-500">{item.label}</dt>
+                    <dd className="mt-0.5 text-stone-800">{item.value}</dd>
                   </div>
-                </div>
-              </Card>
-            )}
+                ))}
+              </dl>
 
-            {isChangesRequested && isAuthor && (
-              <Card className="flex flex-wrap gap-2">
-                <Button variant="primary" size="sm" onClick={handleResubmit} disabled={busy}>
-                  Resubmit
-                </Button>
-                <Link to={`/memos/${id}/edit`}>
-                  <Button variant="outline" size="sm">
-                    Edit
-                  </Button>
-                </Link>
-              </Card>
-            )}
+              <div className="mt-5 border-t border-stone-100 pt-5">
+                <p className="text-sm font-medium text-stone-700">Body</p>
+                <p className="mt-2 max-w-[70ch] whitespace-pre-wrap text-sm leading-relaxed text-stone-800">{memo.body}</p>
+              </div>
+            </Card>
 
-            {!isDraft && !isChangesRequested && !isCurrentApprover && (
-              <Card className="bg-stone-50/60">
-                <p className="text-sm text-stone-500">This memo is read-only for you at this stage.</p>
-              </Card>
-            )}
+            <Card padded={false} className="order-6 lg:order-none">
+              <div className="px-5 py-4 sm:px-6">
+                <AttachmentsSection memoId={id} canUpload={canComment} currentUserId={currentUserId} isAuthor={isAuthor} />
+              </div>
+            </Card>
+
+            <Card padded={false} className="order-5 lg:order-none">
+              <div className="px-5 py-4 sm:px-6">
+                <ActivitySection memoId={id} canComment={canComment} actions={actions} />
+              </div>
+            </Card>
           </div>
-
-          <Card className="order-2 lg:order-none lg:col-span-2 lg:row-start-1">
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
-              {metaItems.map((item) => (
-                <div key={item.label}>
-                  <dt className="text-xs uppercase tracking-wide text-stone-500">{item.label}</dt>
-                  <dd className="mt-0.5 text-stone-800">{item.value}</dd>
-                </div>
-              ))}
-            </dl>
-
-            <div className="mt-5 border-t border-stone-100 pt-5">
-              <p className="text-sm font-medium text-stone-700">Body</p>
-              <p className="mt-2 max-w-[70ch] whitespace-pre-wrap text-sm leading-relaxed text-stone-800">{memo.body}</p>
-            </div>
-          </Card>
-
-          <Card className="order-3 lg:order-none lg:col-start-3 lg:row-start-2">
-            <p className="text-sm font-semibold text-stone-800">Workflow</p>
-            <div className="mt-3">
-              <MemoHistoryTimeline actions={actions} versions={versions} workflowSteps={workflowSteps} loading={false} error="" />
-            </div>
-          </Card>
-
-          <div className="order-4 lg:order-none lg:col-start-3 lg:row-start-3">
-            <ParticipantWorkspace
-              memo={memo}
-              workflowSteps={workflowSteps}
-              directory={directory}
-              currentUserId={currentUserId}
-              canManage={canManageParticipants}
-              onActionComplete={fetchAll}
-            />
-          </div>
-
-          {/* lg:self-start: without it, CSS Grid's default align-items:
-              stretch forces this card to match the height of its row-mate
-              (Workflow, in the right column) — a compact attachments list
-              would otherwise be stretched into a mostly-empty card. Sizing
-              to its own content instead is what makes this read as a
-              compact supporting section rather than a major content block. */}
-          <Card padded={false} className="order-6 self-start lg:order-none lg:col-span-2 lg:row-start-2">
-            <div className="px-5 py-4 sm:px-6">
-              <AttachmentsSection memoId={id} canUpload={canComment} currentUserId={currentUserId} isAuthor={isAuthor} />
-            </div>
-          </Card>
-
-          <Card padded={false} className="order-5 lg:order-none lg:col-span-2 lg:row-start-3">
-            <div className="px-5 py-4 sm:px-6">
-              <ActivitySection memoId={id} canComment={canComment} actions={actions} />
-            </div>
-          </Card>
         </div>
       </div>
     </AppShell>
