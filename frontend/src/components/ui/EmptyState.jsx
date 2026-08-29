@@ -13,7 +13,7 @@ function EmptyState({ title = 'Nothing here yet', message, action, className = '
         <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h10" />
       </svg>
       <p className="text-sm font-medium text-stone-600">{title}</p>
-      {message && <p className="text-sm text-stone-400">{message}</p>}
+      {message && <p className="text-sm text-stone-500">{message}</p>}
       {action && <div className="mt-2">{action}</div>}
     </div>
   );

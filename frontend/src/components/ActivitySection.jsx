@@ -13,7 +13,7 @@ function CommentEntry({ comment }) {
     <div className="rounded-md border border-stone-200 bg-stone-50/60 p-3 text-sm">
       <div className="flex items-center justify-between">
         <span className="font-medium text-stone-800">{comment.authorId?.name || 'Unknown'}</span>
-        <span className="text-xs text-stone-400">{new Date(comment.createdAt).toLocaleString()}</span>
+        <span className="text-xs text-stone-500">{new Date(comment.createdAt).toLocaleString()}</span>
       </div>
       <p className="mt-1 whitespace-pre-wrap text-stone-700">{comment.text}</p>
     </div>
@@ -32,9 +32,9 @@ function ActionEntry({ action }) {
           <span className="font-medium text-stone-500">{action.actor?.name || 'Unknown'}</span>
           <ActionBadge action={action.action} className="text-xs" />
         </div>
-        {action.recipient?.name && <p className="text-xs text-stone-400">&rarr; sent to {action.recipient.name}</p>}
+        {action.recipient?.name && <p className="text-xs text-stone-500">&rarr; sent to {action.recipient.name}</p>}
         {action.comment && <p className="mt-0.5 text-xs italic text-stone-500">&ldquo;{action.comment}&rdquo;</p>}
-        <p className="mt-0.5 text-xs text-stone-400">{new Date(action.createdAt).toLocaleString()}</p>
+        <p className="mt-0.5 text-xs text-stone-500">{new Date(action.createdAt).toLocaleString()}</p>
       </div>
     </div>
   );

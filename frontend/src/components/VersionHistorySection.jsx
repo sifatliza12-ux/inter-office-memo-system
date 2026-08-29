@@ -39,7 +39,7 @@ function VersionHistorySection({ memoId }) {
         {loading ? (
           <LoadingSpinner size="sm" label="Loading versions..." className="justify-start" />
         ) : versions.length === 0 ? (
-          <p className="text-sm text-stone-400">No version history yet.</p>
+          <p className="text-sm text-stone-500">No version history yet.</p>
         ) : (
           versions.map((version) => (
             <details key={version._id} className="rounded-md border border-stone-200 p-3 text-sm">
@@ -49,11 +49,11 @@ function VersionHistorySection({ memoId }) {
               </summary>
               <div className="mt-2 space-y-2 border-t border-stone-100 pt-2">
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-stone-400">Subject</p>
+                  <p className="text-xs uppercase tracking-wide text-stone-500">Subject</p>
                   <p className="text-stone-800">{version.subject}</p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-stone-400">Body</p>
+                  <p className="text-xs uppercase tracking-wide text-stone-500">Body</p>
                   <p className="whitespace-pre-wrap text-stone-700">{version.body}</p>
                 </div>
               </div>

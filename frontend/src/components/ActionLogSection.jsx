@@ -36,9 +36,9 @@ function ActionLogSection({ memoId }) {
 
       <ul className="mt-2 space-y-1 text-sm text-stone-600">
         {loading ? (
-          <li className="text-stone-400">Loading...</li>
+          <li className="text-stone-500">Loading...</li>
         ) : actions.length === 0 ? (
-          <li className="text-stone-400">No actions recorded yet.</li>
+          <li className="text-stone-500">No actions recorded yet.</li>
         ) : (
           actions.map((entry) => (
             <li key={entry._id}>

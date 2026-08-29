@@ -61,7 +61,9 @@ const EVENT_VISUAL_KEY = {
 };
 const dotColorFor = (eventType) => {
   const key = EVENT_VISUAL_KEY[eventType];
-  return key ? getStatusVisual(key).dot : 'bg-stone-400';
+  // stone-500, not -400: -400 measured 2.52:1 against white, under the 3:1
+  // non-text minimum for this filled UI-component dot.
+  return key ? getStatusVisual(key).dot : 'bg-stone-500';
 };
 
 function AuditLog() {
@@ -202,7 +204,7 @@ function AuditLog() {
                       <span className="font-medium text-stone-900">{entry.userId?.name || 'Unknown user'}</span>{' '}
                       <span className="text-stone-600">{entry.description}</span>
                     </p>
-                    <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-stone-400">
+                    <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-stone-500">
                       <span>{new Date(entry.createdAt).toLocaleString()}</span>
                       <span aria-hidden="true">&middot;</span>
                       <span className="font-mono">{entry.eventType}</span>

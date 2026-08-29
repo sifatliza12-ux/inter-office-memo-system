@@ -9,7 +9,7 @@ const DOT_CLASSES = {
 
 function WorkflowTimeline({ steps }) {
   if (!steps || steps.length === 0) {
-    return <p className="text-sm text-stone-400">This memo has not been submitted yet.</p>;
+    return <p className="text-sm text-stone-500">This memo has not been submitted yet.</p>;
   }
 
   return (
@@ -31,7 +31,7 @@ function WorkflowTimeline({ steps }) {
               <StatusBadge status={step.status} />
             </div>
             {step.actionDate && (
-              <p className="mt-0.5 text-xs text-stone-400">{new Date(step.actionDate).toLocaleString()}</p>
+              <p className="mt-0.5 text-xs text-stone-500">{new Date(step.actionDate).toLocaleString()}</p>
             )}
             {step.comment && <p className="mt-1 text-sm italic text-stone-600">&ldquo;{step.comment}&rdquo;</p>}
           </div>

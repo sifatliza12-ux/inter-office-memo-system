@@ -291,7 +291,7 @@ function MemoDetail() {
 
             {!isDraft && !isChangesRequested && !isCurrentApprover && (
               <Card className="bg-stone-50/60">
-                <p className="text-sm text-stone-400">This memo is read-only for you at this stage.</p>
+                <p className="text-sm text-stone-500">This memo is read-only for you at this stage.</p>
               </Card>
             )}
           </div>
@@ -300,7 +300,7 @@ function MemoDetail() {
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
               {metaItems.map((item) => (
                 <div key={item.label}>
-                  <dt className="text-xs uppercase tracking-wide text-stone-400">{item.label}</dt>
+                  <dt className="text-xs uppercase tracking-wide text-stone-500">{item.label}</dt>
                   <dd className="mt-0.5 text-stone-800">{item.value}</dd>
                 </div>
               ))}

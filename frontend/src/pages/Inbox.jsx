@@ -165,7 +165,7 @@ function Inbox() {
                     <Link to={`/memos/${memo._id}`} className="font-medium text-stone-800 hover:text-blue-700 hover:underline">
                       {memo.subject}
                     </Link>
-                    <p className="mt-0.5 font-mono text-xs text-stone-400">{memo.referenceNumber}</p>
+                    <p className="mt-0.5 font-mono text-xs text-stone-500">{memo.referenceNumber}</p>
                   </Td>
                   <Td className="text-stone-500">{memo.authorId?.name || '—'}</Td>
                   <Td className="text-stone-500">{memo.departmentId?.name || '—'}</Td>
@@ -176,7 +176,7 @@ function Inbox() {
                   <Td className={`capitalize ${PRIORITY_ACCENT[memo.priority] || 'text-stone-600'}`}>{memo.priority}</Td>
                   <Td>
                     <p className="font-medium text-stone-700">{formatAge(memo.ageMs)}</p>
-                    <p className="text-xs text-stone-400">
+                    <p className="text-xs text-stone-500">
                       {memo.submittedAt ? new Date(memo.submittedAt).toLocaleDateString() : '—'}
                     </p>
                   </Td>

@@ -171,7 +171,7 @@ function DepartmentsSection() {
                   <Td>
                     <span
                       className={`inline-flex items-center gap-1.5 text-sm font-medium ${
-                        department.status === 'active' ? 'text-emerald-700' : 'text-stone-400'
+                        department.status === 'active' ? 'text-emerald-700' : 'text-stone-500'
                       }`}
                     >
                       <span

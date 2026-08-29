@@ -96,7 +96,9 @@ function SidebarLinks({ onNavigate, collapsed = false }) {
       {GROUPS.map((group) => (
         <div key={group.heading} className="space-y-1">
           {!collapsed && (
-            <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-blue-300/60">{group.heading}</p>
+            // /60 measured 3.1:1 against bg-blue-900, under the 4.5:1 text
+            // minimum; /90 measures ~5:1.
+            <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-blue-300/90">{group.heading}</p>
           )}
           {group.links.map((link) => (
             <NavLinkItem key={link.to} {...link} collapsed={collapsed} onNavigate={onNavigate} />
@@ -107,7 +109,7 @@ function SidebarLinks({ onNavigate, collapsed = false }) {
       {user?.role === 'admin' && (
         <div className="space-y-1">
           {!collapsed && (
-            <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-blue-300/60">Management</p>
+            <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-blue-300/90">Management</p>
           )}
           {MANAGEMENT_LINKS.map((link) => (
             <NavLinkItem key={link.to} {...link} collapsed={collapsed} onNavigate={onNavigate} />
@@ -180,7 +182,7 @@ function NavBar({ collapsed = false, onToggleCollapse }) {
         <button
           type="button"
           onClick={onToggleCollapse}
-          className={`flex items-center gap-2.5 border-t border-blue-800/80 px-3 py-3 text-xs font-medium text-blue-300/70 transition-colors hover:bg-blue-800/60 hover:text-white ${
+          className={`flex items-center gap-2.5 border-t border-blue-800/80 px-3 py-3 text-xs font-medium text-blue-300/90 transition-colors hover:bg-blue-800/60 hover:text-white ${
             collapsed ? 'justify-center' : ''
           }`}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}

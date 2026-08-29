@@ -201,12 +201,12 @@ function MyMemos() {
                     <Link to={`/memos/${memo._id}`} className="font-medium text-stone-800 hover:text-blue-700 hover:underline">
                       {memo.subject}
                     </Link>
-                    <p className="mt-0.5 font-mono text-xs text-stone-400">{memo.referenceNumber}</p>
+                    <p className="mt-0.5 font-mono text-xs text-stone-500">{memo.referenceNumber}</p>
                   </Td>
                   <Td className="text-stone-500">{departmentName(memo.departmentId) || '—'}</Td>
                   <Td>
                     <StatusBadge status={memo.status} />
-                    {workflowDetail(memo) && <p className="mt-0.5 text-xs text-stone-400">{workflowDetail(memo)}</p>}
+                    {workflowDetail(memo) && <p className="mt-0.5 text-xs text-stone-500">{workflowDetail(memo)}</p>}
                   </Td>
                   <Td className="text-stone-500">
                     {memo.workflowParticipants?.length || 0}

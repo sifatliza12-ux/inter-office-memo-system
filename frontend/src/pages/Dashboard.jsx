@@ -74,9 +74,9 @@ function Dashboard() {
           <div className="animate-fade-in-up space-y-6">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Card>
-                <p className="text-xs font-semibold uppercase tracking-wide text-stone-400">Total Memos</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Total Memos</p>
                 <p className="mt-2 text-3xl font-semibold tabular-nums text-stone-900">{summary.myMemosCount}</p>
-                <p className="mt-1 text-xs text-stone-400">Authored by you</p>
+                <p className="mt-1 text-xs text-stone-500">Authored by you</p>
               </Card>
 
               <Link to="/inbox" className="block">
@@ -90,11 +90,11 @@ function Dashboard() {
               </Link>
 
               <Card>
-                <p className="text-xs font-semibold uppercase tracking-wide text-stone-400">Completed</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Completed</p>
                 <p className="mt-2 text-3xl font-semibold tabular-nums text-stone-900">
                   {summary.myMemosByStatus.approved || 0}
                 </p>
-                <p className="mt-1 text-xs text-stone-400">Approved memos of yours</p>
+                <p className="mt-1 text-xs text-stone-500">Approved memos of yours</p>
               </Card>
             </div>
 
@@ -121,7 +121,7 @@ function Dashboard() {
                               {activity.subject}
                             </Link>
                           </p>
-                          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-stone-400">
+                          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-stone-500">
                             <span className="font-mono">{activity.referenceNumber}</span>
                             <span>{activity.date ? new Date(activity.date).toLocaleString() : ''}</span>
                           </p>

@@ -39,7 +39,7 @@ function VersionMarker({ versionNumber, version, isLast }) {
           Version {versionNumber} created
         </span>
         {version?.createdAt && (
-          <span className="ml-2 text-xs text-stone-400">{new Date(version.createdAt).toLocaleString()}</span>
+          <span className="ml-2 text-xs text-stone-500">{new Date(version.createdAt).toLocaleString()}</span>
         )}
       </div>
     </li>
@@ -64,7 +64,7 @@ function ActionEntry({ action, isLast }) {
       </div>
       <div className={`flex-1 pb-1 ${minor ? 'opacity-80' : ''}`}>
         <ActionBadge action={action.action} className={minor ? 'text-xs' : 'text-sm font-semibold'} />
-        <p className="mt-1 text-xs text-stone-400">{new Date(action.createdAt).toLocaleString()}</p>
+        <p className="mt-1 text-xs text-stone-500">{new Date(action.createdAt).toLocaleString()}</p>
         <p className="mt-1 text-sm text-stone-700">{action.actor?.name || 'Unknown'}</p>
         {action.recipient?.name && (
           <p className="mt-0.5 text-sm text-stone-500">

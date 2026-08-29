@@ -8,7 +8,7 @@ function Field({ label, htmlFor, error, required, hint, children }) {
         </label>
       )}
       {children}
-      {hint && !error && <p className="mt-1 text-xs text-stone-400">{hint}</p>}
+      {hint && !error && <p className="mt-1 text-xs text-stone-500">{hint}</p>}
       {error && <p className="mt-1 text-xs font-medium text-red-600">{error}</p>}
     </div>
   );

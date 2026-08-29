@@ -178,7 +178,7 @@ function Login() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-900 to-tangerine-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 ease-out hover:from-blue-800 hover:to-tangerine-500 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tangerine-300 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.99]"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-900 to-tangerine-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 ease-out hover:from-blue-800 hover:to-tangerine-600 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tangerine-300 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.99]"
                 >
                   {submitting ? 'Signing in...' : 'Sign in'}
                   {!submitting && (

@@ -124,7 +124,7 @@ function AttachmentsSection({ memoId, canUpload, currentUserId, isAuthor }) {
                     <p className="truncate text-sm font-medium text-stone-800" title={attachment.filename}>
                       {attachment.filename}
                     </p>
-                    <p className="mt-0.5 text-xs text-stone-400">
+                    <p className="mt-0.5 text-xs text-stone-500">
                       {formatSize(attachment.size)} &middot; {attachment.uploadedBy?.name || 'Unknown'}
                     </p>
                     <div className="mt-1.5 flex items-center gap-3">
@@ -161,7 +161,7 @@ function AttachmentsSection({ memoId, canUpload, currentUserId, isAuthor }) {
             {busy ? 'Uploading...' : 'Upload File'}
             <input type="file" onChange={handleFileChange} disabled={busy} className="hidden" />
           </label>
-          <p className="mt-1 text-xs text-stone-400">PDF, Word, Excel, PNG, or JPEG — up to 10MB.</p>
+          <p className="mt-1 text-xs text-stone-500">PDF, Word, Excel, PNG, or JPEG — up to 10MB.</p>
         </div>
       )}
     </div>

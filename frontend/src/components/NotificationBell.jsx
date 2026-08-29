@@ -113,7 +113,7 @@ function NotificationBell() {
                 <LoadingSpinner size="sm" label="Loading..." />
               </div>
             ) : notifications.length === 0 ? (
-              <p className="p-4 text-sm text-stone-400">No notifications.</p>
+              <p className="p-4 text-sm text-stone-500">No notifications.</p>
             ) : (
               notifications.map((notification) => (
                 <button
@@ -125,7 +125,7 @@ function NotificationBell() {
                 >
                   <p className="font-medium text-stone-800">{notification.title}</p>
                   <p className="mt-0.5 text-xs text-stone-600">{notification.message}</p>
-                  <p className="mt-0.5 text-[11px] text-stone-400">
+                  <p className="mt-0.5 text-[11px] text-stone-500">
                     {new Date(notification.createdAt).toLocaleString()}
                   </p>
                 </button>

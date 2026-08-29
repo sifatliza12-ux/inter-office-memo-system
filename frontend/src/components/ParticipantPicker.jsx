@@ -19,12 +19,12 @@ function ParticipantPicker({ users, selectedIds, onChange }) {
   return (
     <div className="mt-1 grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-stone-400">Available users</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Available users</p>
         <ul className="mt-1.5 max-h-48 space-y-1 overflow-y-auto rounded-md border border-stone-200 bg-stone-50/50 p-2">
           {availableUsers.map((user) => (
             <li key={user._id} className="flex items-center justify-between rounded px-1.5 py-1 text-sm hover:bg-white">
               <span className="text-stone-700">
-                {user.name} <span className="text-stone-400">({user.email})</span>
+                {user.name} <span className="text-stone-500">({user.email})</span>
               </span>
               <button
                 type="button"
@@ -35,12 +35,12 @@ function ParticipantPicker({ users, selectedIds, onChange }) {
               </button>
             </li>
           ))}
-          {availableUsers.length === 0 && <li className="px-1.5 py-1 text-sm text-stone-400">No more users to add.</li>}
+          {availableUsers.length === 0 && <li className="px-1.5 py-1 text-sm text-stone-500">No more users to add.</li>}
         </ul>
       </div>
 
       <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-stone-400">Participants (approval order)</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Participants (approval order)</p>
         <ol className="mt-1.5 max-h-48 space-y-1 overflow-y-auto rounded-md border border-stone-200 bg-stone-50/50 p-2">
           {selectedIds.map((id, index) => {
             const user = userById(id);
@@ -77,7 +77,7 @@ function ParticipantPicker({ users, selectedIds, onChange }) {
               </li>
             );
           })}
-          {selectedIds.length === 0 && <li className="px-1.5 py-1 text-sm text-stone-400">No participants selected yet.</li>}
+          {selectedIds.length === 0 && <li className="px-1.5 py-1 text-sm text-stone-500">No participants selected yet.</li>}
         </ol>
       </div>
     </div>

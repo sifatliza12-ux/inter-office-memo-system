@@ -85,7 +85,7 @@ function ApprovalActions({ memoId, users, onActionComplete }) {
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium text-blue-900">It is your turn to act on this memo.</p>
         <OverflowMenu label="More actions">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">Redirect to someone specific</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">Redirect to someone specific</p>
           <Select value={redirectTarget} onChange={(event) => setRedirectTarget(event.target.value)} className="!py-1.5 text-sm">
             <option value="">Select a user...</option>
             {users.map((user) => (
@@ -94,7 +94,7 @@ function ApprovalActions({ memoId, users, onActionComplete }) {
               </option>
             ))}
           </Select>
-          <p className="mt-2 text-xs text-stone-400">Uses the comment field below — required for both options here.</p>
+          <p className="mt-2 text-xs text-stone-500">Uses the comment field below — required for both options here.</p>
           <div className="mt-2 flex flex-col gap-1.5">
             <Button
               type="button"
@@ -159,11 +159,15 @@ function ApprovalActions({ memoId, users, onActionComplete }) {
         >
           Request Changes
         </Button>
+        {/* border-tangerine-600, not -300: -300 measured 1.69:1 and -500
+            measured 2.8:1 against the card's surrounding surface, both
+            under the 3:1 non-text minimum for a UI-component boundary;
+            -600 measures ~3.7:1. */}
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="!border-tangerine-300 !text-tangerine-800 hover:!border-tangerine-400 hover:!bg-tangerine-50 focus-visible:!ring-tangerine-200"
+          className="!border-tangerine-600 !text-tangerine-800 hover:!border-tangerine-700 hover:!bg-tangerine-50 focus-visible:!ring-tangerine-200"
           disabled={busy}
           onClick={() => runAction(() => rejectMemo(memoId, comment), 'Rejected')}
         >

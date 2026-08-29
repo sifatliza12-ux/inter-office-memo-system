@@ -72,7 +72,11 @@ export const STATUS_VISUALS = {
     label: 'Completed',
   },
   changes_requested: {
-    dot: 'bg-tangerine-500',
+    // dot is a literal filled UI-component circle (AuditLog, timeline
+    // connectors) judged against the 3:1 non-text threshold, not the 4.5:1
+    // text one that `text` above is held to — -500 measured 2.8:1 against
+    // white; -600 measures ~3.6:1. `text`/`Icon` colors are unaffected.
+    dot: 'bg-tangerine-600',
     text: 'text-tangerine-700',
     ring: 'ring-tangerine-100',
     Icon: PencilIcon,
@@ -96,29 +100,32 @@ export const STATUS_VISUALS = {
   // different neutral than Draft's warm `stone`, so "not started" (draft)
   // and "administrative event" (participant add/remove) read as distinct
   // kinds of neutral rather than identical grays.
+  // dot bumped one step (slate-400 -> -500) from the text/Icon tone: -400
+  // measured 2.56:1 as a filled circle against white, under the 3:1
+  // non-text minimum; -500 measures ~4.9:1.
   participant_added: {
-    dot: 'bg-slate-400',
+    dot: 'bg-slate-500',
     text: 'text-slate-600',
     ring: 'ring-slate-100',
     Icon: PlusIcon,
     label: 'Participant Added',
   },
   participant_removed: {
-    dot: 'bg-slate-400',
+    dot: 'bg-slate-500',
     text: 'text-slate-600',
     ring: 'ring-slate-100',
     Icon: MinusIcon,
     label: 'Participant Removed',
   },
   removed: {
-    dot: 'bg-slate-400',
+    dot: 'bg-slate-500',
     text: 'text-slate-500',
     ring: 'ring-slate-100',
     Icon: MinusIcon,
     label: 'Removed',
   },
   author: {
-    dot: 'bg-stone-400',
+    dot: 'bg-stone-500',
     text: 'text-stone-500',
     ring: 'ring-stone-100',
     Icon: null,
@@ -126,6 +133,6 @@ export const STATUS_VISUALS = {
   },
 };
 
-const FALLBACK_VISUAL = { dot: 'bg-stone-400', text: 'text-stone-600', ring: 'ring-stone-100', Icon: null };
+const FALLBACK_VISUAL = { dot: 'bg-stone-500', text: 'text-stone-600', ring: 'ring-stone-100', Icon: null };
 
 export const getStatusVisual = (key) => STATUS_VISUALS[key] || { ...FALLBACK_VISUAL, label: key || '—' };

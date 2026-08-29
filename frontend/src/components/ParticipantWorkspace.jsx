@@ -50,7 +50,7 @@ function ParticipantRow({ row, onEditRole, onStartRemove, onCancelRemove, onConf
           </span>
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-stone-800">{row.name}</p>
-            {row.department && <p className="text-xs text-stone-400">{row.department}</p>}
+            {row.department && <p className="text-xs text-stone-500">{row.department}</p>}
           </div>
         </div>
 
@@ -68,7 +68,7 @@ function ParticipantRow({ row, onEditRole, onStartRemove, onCancelRemove, onConf
             <button
               type="button"
               onClick={() => onEditRole(row)}
-              className="inline-flex items-center gap-1 text-xs text-stone-400 transition-colors hover:text-blue-700"
+              className="inline-flex items-center gap-1 text-xs text-stone-500 transition-colors hover:text-blue-700"
             >
               <PencilIcon className="h-3 w-3" />
               {row.roleLabel || 'Add role label'}
@@ -386,7 +386,7 @@ function ParticipantWorkspace({ memo, workflowSteps, directory, currentUserId, c
             onRoleCancel={cancelEditRole}
           />
         ))}
-        {rows.length === 0 && <li className="px-5 py-6 text-center text-sm text-stone-400 sm:px-6">No participants yet.</li>}
+        {rows.length === 0 && <li className="px-5 py-6 text-center text-sm text-stone-500 sm:px-6">No participants yet.</li>}
       </ul>
     </Card>
   );

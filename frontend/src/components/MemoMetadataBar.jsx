@@ -8,7 +8,7 @@ function MetadataCell({ label, value, className = '' }) {
   return (
     <div className={`px-4 py-3 sm:px-5 ${className}`}>
       <p className="truncate text-sm font-semibold text-stone-800">{value}</p>
-      <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400">{label}</p>
+      <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-500">{label}</p>
     </div>
   );
 }
@@ -21,7 +21,7 @@ function MemoMetadataBar({ memo, fromLabel, toLabel }) {
       <MetadataCell label="To" value={toLabel || '—'} />
       <div className="px-4 py-3 sm:px-5">
         <StatusBadge status={memo.status} className="text-sm font-semibold" />
-        <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400">Status</p>
+        <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-500">Status</p>
       </div>
     </div>
   );

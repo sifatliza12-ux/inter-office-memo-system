@@ -1,6 +1,9 @@
 const VARIANT_CLASSES = {
+  // tangerine-700, not -500: white text on -500 measures 2.8:1, well under
+  // the 4.5:1 AA text minimum — verified live via computed-style contrast
+  // measurement, not assumed from the swatch alone. -700 measures ~5.4:1.
   primary:
-    'bg-tangerine-500 text-white shadow-sm hover:bg-tangerine-600 focus-visible:ring-tangerine-300 disabled:hover:bg-tangerine-500',
+    'bg-tangerine-700 text-white shadow-sm hover:bg-tangerine-800 focus-visible:ring-tangerine-300 disabled:hover:bg-tangerine-700',
   secondary:
     'bg-blue-800 text-white shadow-sm hover:bg-blue-700 focus-visible:ring-blue-300 disabled:hover:bg-blue-800',
   outline:

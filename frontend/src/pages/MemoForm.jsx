@@ -324,7 +324,7 @@ function MemoForm() {
           {!isEditing && (
             <Card as="section">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-500">Attachments</h2>
-              <p className="mt-1 text-xs text-stone-400">
+              <p className="mt-1 text-xs text-stone-500">
                 Selected files are uploaded once the memo is created. PDF, Word, Excel, PNG, or JPEG — up to 10MB each.
               </p>
               <input
@@ -341,7 +341,7 @@ function MemoForm() {
                       className="flex items-center justify-between rounded-md border border-stone-200 px-3 py-1.5 text-sm"
                     >
                       <span className="text-stone-700">
-                        {file.name} <span className="text-stone-400">({formatSize(file.size)})</span>
+                        {file.name} <span className="text-stone-500">({formatSize(file.size)})</span>
                       </span>
                       <button
                         type="button"

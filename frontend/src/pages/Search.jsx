@@ -100,7 +100,7 @@ function Search() {
           </div>
 
           <Card className="mt-3">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-400">Filters</p>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-500">Filters</p>
             <div className="flex flex-wrap items-end gap-3">
               <div className="w-40">
                 <label className="mb-1 block text-xs font-medium text-stone-500" htmlFor="search-status">
@@ -221,7 +221,7 @@ function Search() {
 
             {grouped.map(([departmentName, memos]) => (
               <div key={departmentName}>
-                <p className="border-b border-stone-200 pb-1.5 text-xs font-semibold uppercase tracking-wider text-stone-400">
+                <p className="border-b border-stone-200 pb-1.5 text-xs font-semibold uppercase tracking-wider text-stone-500">
                   {departmentName}
                 </p>
                 <ul className="divide-y divide-stone-100">
@@ -233,13 +233,13 @@ function Search() {
                       >
                         <div className="min-w-0">
                           <p className="truncate font-medium text-stone-800">{memo.subject}</p>
-                          <p className="mt-0.5 flex items-center gap-2 text-xs text-stone-400">
+                          <p className="mt-0.5 flex items-center gap-2 text-xs text-stone-500">
                             <span className="font-mono">{memo.referenceNumber}</span>
                             <span aria-hidden="true">&middot;</span>
                             <StatusBadge status={memo.status} />
                           </p>
                         </div>
-                        <span className="shrink-0 text-sm capitalize text-stone-400">{memo.priority}</span>
+                        <span className="shrink-0 text-sm capitalize text-stone-500">{memo.priority}</span>
                       </Link>
                     </li>
                   ))}

@@ -295,7 +295,7 @@ function UsersSection() {
                   <Td>
                     <span
                       className={`inline-flex items-center gap-1.5 text-sm font-medium ${
-                        user.status === 'active' ? 'text-emerald-700' : 'text-stone-400'
+                        user.status === 'active' ? 'text-emerald-700' : 'text-stone-500'
                       }`}
                     >
                       <span className={`h-2 w-2 rounded-full ${user.status === 'active' ? 'bg-emerald-500' : 'bg-stone-300'}`} />
