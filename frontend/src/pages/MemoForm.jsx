@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getMemo, createMemo, updateMemo, submitMemo } from '../services/memos';
 import { resubmitMemo } from '../services/workflow';
 import { getDirectory } from '../services/directory';
+import { listWorkflowTemplates } from '../services/workflowTemplates';
 import { uploadAttachment } from '../services/attachments';
 import { useAuth } from '../context/AuthContext.jsx';
 import ParticipantPicker from '../components/ParticipantPicker.jsx';
@@ -46,6 +47,13 @@ function MemoForm() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [memoStatus, setMemoStatus] = useState('draft');
+  // Optional workflow-template picker (Stage 15) — creation only. Selecting
+  // a template swaps the manual ParticipantPicker for one user-select per
+  // position; clearing it (selectedTemplateId === '') reverts to manual.
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  // order -> userId, keyed by the template's own position.order values.
+  const [templateAssignments, setTemplateAssignments] = useState({});
   // Files picked before the memo exists yet — nothing to upload against
   // until createMemo() returns an id, so these are held locally and
   // uploaded through the existing attachment endpoint right after creation.
@@ -57,6 +65,17 @@ function MemoForm() {
       .then(({ data }) => setDirectory(data))
       .catch(() => setDirectory({ users: [], departments: [] }));
   }, []);
+
+  useEffect(() => {
+    if (isEditing) {
+      return;
+    }
+    // Active-only, as any regular authenticated user (GET /workflow-templates
+    // never needs admin) — the same list an admin sees by default.
+    listWorkflowTemplates()
+      .then(({ data }) => setTemplates(data.workflowTemplates))
+      .catch(() => setTemplates([]));
+  }, [isEditing]);
 
   useEffect(() => {
     if (!isEditing) {
@@ -84,14 +103,46 @@ function MemoForm() {
       .finally(() => setLoading(false));
   }, [id, isEditing, navigate]);
 
-  const buildPayload = () => ({
-    subject: form.subject,
-    body: form.body,
-    category: form.category,
-    priority: form.priority,
-    departmentId: form.departmentId || undefined,
-    workflowParticipants: form.workflowParticipants,
-  });
+  const selectedTemplate = templates.find((template) => template._id === selectedTemplateId);
+
+  // Every position must have an assigned user before the memo can be saved
+  // at all (the backend rejects an incomplete template assignment outright,
+  // draft or not — there's no partial-template state to persist).
+  const templateComplete =
+    !selectedTemplate || selectedTemplate.positions.every((position) => templateAssignments[position.order]);
+  const templateIncomplete = !isEditing && Boolean(selectedTemplateId) && !templateComplete;
+
+  const handleSelectTemplate = (templateId) => {
+    setSelectedTemplateId(templateId);
+    setTemplateAssignments({});
+  };
+
+  const setTemplateAssignment = (order, userId) => {
+    setTemplateAssignments((previous) => ({ ...previous, [order]: userId }));
+  };
+
+  const buildPayload = () => {
+    const base = {
+      subject: form.subject,
+      body: form.body,
+      category: form.category,
+      priority: form.priority,
+      departmentId: form.departmentId || undefined,
+    };
+
+    if (!isEditing && selectedTemplateId) {
+      return {
+        ...base,
+        templateId: selectedTemplateId,
+        templateAssignments: Object.entries(templateAssignments).map(([order, userId]) => ({
+          order: Number(order),
+          userId,
+        })),
+      };
+    }
+
+    return { ...base, workflowParticipants: form.workflowParticipants };
+  };
 
   const handleStageFiles = (event) => {
     const files = Array.from(event.target.files || []);
@@ -312,12 +363,53 @@ function MemoForm() {
 
           <Card as="section">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-500">Participants</h2>
+
+            {!isEditing && templates.length > 0 && (
+              <div className="mt-3">
+                <Field label="Use a workflow template (optional)" htmlFor="memo-template">
+                  <Select
+                    id="memo-template"
+                    value={selectedTemplateId}
+                    onChange={(event) => handleSelectTemplate(event.target.value)}
+                  >
+                    <option value="">No template — choose participants manually</option>
+                    {templates.map((template) => (
+                      <option key={template._id} value={template._id}>
+                        {template.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
+            )}
+
             <div className="mt-3">
-              <ParticipantPicker
-                users={directory.users}
-                selectedIds={form.workflowParticipants}
-                onChange={(ids) => setForm({ ...form, workflowParticipants: ids })}
-              />
+              {!isEditing && selectedTemplate ? (
+                <div className="space-y-2">
+                  {selectedTemplate.positions.map((position) => (
+                    <div key={position.order} className="flex items-center gap-2">
+                      <span className="w-36 shrink-0 text-sm text-stone-600">{position.roleLabel}</span>
+                      <Select
+                        value={templateAssignments[position.order] || ''}
+                        onChange={(event) => setTemplateAssignment(position.order, event.target.value)}
+                      >
+                        <option value="">Select a user...</option>
+                        {directory.users.map((user) => (
+                          <option key={user._id} value={user._id}>
+                            {user.name} ({user.email})
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <ParticipantPicker
+                  users={directory.users}
+                  selectedIds={form.workflowParticipants}
+                  onChange={(ids) => setForm({ ...form, workflowParticipants: ids })}
+                />
+              )}
             </div>
           </Card>
 
@@ -357,11 +449,17 @@ function MemoForm() {
             </Card>
           )}
 
+          {templateIncomplete && (
+            <p className="text-right text-xs text-tangerine-600">
+              Assign a user to every template position before saving.
+            </p>
+          )}
+
           <div className="flex justify-end gap-2">
-            <Button type="submit" variant="secondary" disabled={submitting}>
+            <Button type="submit" variant="secondary" disabled={submitting || templateIncomplete}>
               Save Draft
             </Button>
-            <Button type="button" variant="primary" disabled={submitting} onClick={saveAndSubmit}>
+            <Button type="button" variant="primary" disabled={submitting || templateIncomplete} onClick={saveAndSubmit}>
               {isResubmit ? 'Resubmit' : 'Submit'}
             </Button>
           </div>

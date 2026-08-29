@@ -3,8 +3,9 @@ import PageContainer from '../components/ui/PageContainer.jsx';
 import Card from '../components/ui/Card.jsx';
 import DepartmentsSection from '../components/DepartmentsSection.jsx';
 import UsersSection from '../components/UsersSection.jsx';
+import WorkflowTemplatesSection from '../components/WorkflowTemplatesSection.jsx';
 import OrganizationStatsSection from '../components/OrganizationStatsSection.jsx';
-import { PeopleIcon, BuildingIcon } from '../components/icons.jsx';
+import { PeopleIcon, BuildingIcon, ArrowForwardIcon } from '../components/icons.jsx';
 
 const WORKSPACE_CARDS = [
   {
@@ -18,6 +19,12 @@ const WORKSPACE_CARDS = [
     label: 'Departments',
     description: 'Organize your organizational structure',
     icon: BuildingIcon,
+  },
+  {
+    anchor: 'workflow-templates-section',
+    label: 'Workflow Templates',
+    description: 'Define reusable approval chains for memo creation',
+    icon: ArrowForwardIcon,
   },
 ];
 
@@ -58,6 +65,9 @@ function Administration() {
         </div>
         <div id="people-section">
           <UsersSection />
+        </div>
+        <div id="workflow-templates-section">
+          <WorkflowTemplatesSection />
         </div>
       </div>
       </PageContainer>

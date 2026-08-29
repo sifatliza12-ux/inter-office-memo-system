@@ -8,6 +8,7 @@ const { notifyAwaitingApproval } = require('./notification.service');
 const { logAuditEvent } = require('./audit.service');
 const { snapshotMemoVersion, listVersions } = require('./memoVersion.service');
 const { recordWorkflowAction } = require('./workflowAction.service');
+const { getActiveTemplateForAssignment } = require('./workflowTemplate.service');
 
 const ALLOWED_CATEGORIES = ['Administrative', 'Financial', 'Procurement', 'HR', 'Academic', 'Technical', 'General'];
 const ALLOWED_PRIORITIES = ['low', 'normal', 'high', 'urgent'];
@@ -30,6 +31,49 @@ const assertParticipantsBelongToOrg = async (organizationId, workflowParticipant
   }
 };
 
+// Stage 15: resolves an optional templateId + templateAssignments
+// ([{ order, userId }]) into an ordered participant list, matching the
+// template's position order. Every position must have an assignment whose
+// userId belongs to this organization AND is an active user — any failure
+// on either check rejects the whole call with 422 (no partial creation),
+// per the PRD §15.3 requirement. The template itself being missing/inactive/
+// cross-org is a 400 (getActiveTemplateForAssignment), consistent with how
+// an invalid departmentId/workflowParticipants reference is handled
+// elsewhere in this file — 422 here is reserved specifically for
+// per-position assignment failures.
+const resolveTemplateAssignments = async (organizationId, templateId, templateAssignments) => {
+  const template = await getActiveTemplateForAssignment(organizationId, templateId);
+
+  const assignmentByOrder = new Map(
+    (Array.isArray(templateAssignments) ? templateAssignments : [])
+      .filter((assignment) => assignment && assignment.userId)
+      .map((assignment) => [Number(assignment.order), assignment.userId])
+  );
+
+  const userIds = template.positions.map((position) => assignmentByOrder.get(position.order));
+
+  if (userIds.some((userId) => !userId)) {
+    throw new ApiError(422, 'Every workflow template position must be assigned a user');
+  }
+
+  const uniqueIds = [...new Set(userIds.map(String))];
+  const activeUsers = await User.find({ _id: { $in: uniqueIds }, organizationId, status: 'active' }).select('_id');
+  const activeIds = new Set(activeUsers.map((user) => user._id.toString()));
+
+  if (uniqueIds.some((id) => !activeIds.has(id))) {
+    throw new ApiError(
+      422,
+      'Every workflow template position must be assigned to an active user in your organization'
+    );
+  }
+
+  return {
+    workflowParticipants: userIds,
+    templateRoleLabels: template.positions.map((position) => position.roleLabel),
+    workflowTemplateId: template._id,
+  };
+};
+
 const assertValidCategory = (category) => {
   if (category !== undefined && !ALLOWED_CATEGORIES.includes(category)) {
     throw new ApiError(400, `category must be one of: ${ALLOWED_CATEGORIES.join(', ')}`);
@@ -43,7 +87,8 @@ const assertValidPriority = (priority) => {
 };
 
 const createMemo = async (organizationId, authorId, authorDepartmentId, payload) => {
-  const { subject, body, category, priority, departmentId, workflowParticipants } = payload;
+  const { subject, body, category, priority, departmentId, workflowParticipants, templateId, templateAssignments } =
+    payload;
 
   if (!subject || !body) {
     throw new ApiError(400, 'subject and body are required');
@@ -54,7 +99,22 @@ const createMemo = async (organizationId, authorId, authorDepartmentId, payload)
 
   const resolvedDepartmentId = departmentId !== undefined ? departmentId : authorDepartmentId;
   await assertDepartmentBelongsToOrg(organizationId, resolvedDepartmentId);
-  await assertParticipantsBelongToOrg(organizationId, workflowParticipants);
+
+  let resolvedParticipants = workflowParticipants || [];
+  let workflowTemplateId;
+  let templateRoleLabels;
+
+  // If templateId is absent, this is the existing manual flow, completely
+  // unchanged (PRD §15.3).
+  if (templateId) {
+    ({
+      workflowParticipants: resolvedParticipants,
+      templateRoleLabels,
+      workflowTemplateId,
+    } = await resolveTemplateAssignments(organizationId, templateId, templateAssignments));
+  } else {
+    await assertParticipantsBelongToOrg(organizationId, resolvedParticipants);
+  }
 
   const referenceNumber = await generateMemoReferenceNumber(organizationId);
 
@@ -66,7 +126,9 @@ const createMemo = async (organizationId, authorId, authorDepartmentId, payload)
     body,
     category,
     priority,
-    workflowParticipants: workflowParticipants || [],
+    workflowParticipants: resolvedParticipants,
+    workflowTemplateId,
+    templateRoleLabels,
     referenceNumber,
     status: 'draft',
   });
@@ -282,6 +344,21 @@ const updateMemo = async (organizationId, id, requestingUserId, payload) => {
     memo.departmentId = departmentId || undefined;
   }
   if (workflowParticipants !== undefined) {
+    // A template-seeded roleLabel (Stage 15) is positionally aligned with
+    // workflowParticipants at seed time, so it's only preserved index-by-
+    // index where the SAME user still occupies the SAME index after this
+    // edit — every other position loses its seeded label (the
+    // correspondence for that slot no longer holds), rather than a change
+    // to one position wiping the label for every position. This never
+    // touches WorkflowStep.roleLabel — that field belongs exclusively to
+    // the separate, unchanged PATCH /:id/workflow/role endpoint
+    // (workflow.service.js's setMyRoleLabel), so a participant's own
+    // already-customized label can never be affected by this edit.
+    const oldParticipants = memo.workflowParticipants;
+    const oldLabels = memo.templateRoleLabels || [];
+    memo.templateRoleLabels = workflowParticipants.map((userId, index) =>
+      oldParticipants[index] && oldParticipants[index].toString() === String(userId) ? oldLabels[index] : undefined
+    );
     memo.workflowParticipants = workflowParticipants;
   }
 
@@ -323,11 +400,25 @@ const submitMemo = async (organizationId, id, requestingUserId) => {
   // participants were set and when the memo is actually submitted.
   await assertParticipantsBelongToOrg(organizationId, memo.workflowParticipants);
 
-  const steps = memo.workflowParticipants.map((userId, index) => ({
-    memoId: memo._id,
-    userId,
-    stepOrder: (index + 1) * STEP_ORDER_INCREMENT,
-  }));
+  // Stage 15: seeds each step's roleLabel from the memo's templateRoleLabels
+  // when present (positionally aligned with workflowParticipants — see the
+  // Memo model comment and updateMemo above). A starting value only: the
+  // participant can still edit/clear their own label afterward via the
+  // existing, unchanged PATCH /:id/workflow/role endpoint. Manual (non-
+  // template) memos have no templateRoleLabels, so roleLabel is left unset,
+  // exactly as before this stage.
+  const steps = memo.workflowParticipants.map((userId, index) => {
+    const step = {
+      memoId: memo._id,
+      userId,
+      stepOrder: (index + 1) * STEP_ORDER_INCREMENT,
+    };
+    const templateRoleLabel = memo.templateRoleLabels && memo.templateRoleLabels[index];
+    if (templateRoleLabel) {
+      step.roleLabel = templateRoleLabel;
+    }
+    return step;
+  });
 
   try {
     await WorkflowStep.insertMany(steps, { ordered: true });

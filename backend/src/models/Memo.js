@@ -111,6 +111,25 @@ const memoSchema = new Schema(
     finalApprovedAt: {
       type: Date,
     },
+    // Stage 15: which WorkflowTemplate (if any) this memo's participants
+    // were originally populated from — historical reference only, never
+    // consulted for authorization or ordering.
+    workflowTemplateId: {
+      type: Schema.Types.ObjectId,
+      ref: 'WorkflowTemplate',
+    },
+    // Positionally aligned with workflowParticipants at the moment a
+    // template was applied — consumed once by submitMemo (memo.service.js)
+    // to seed each newly created WorkflowStep's roleLabel, then left alone.
+    // Cleared by updateMemo whenever workflowParticipants is edited to a
+    // different set/order, so a manual edit can never cause a stale label to
+    // seed onto the wrong participant.
+    templateRoleLabels: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
   },
   { timestamps: true }
 );
