@@ -4,7 +4,8 @@
 
 @layer base {
   body {
-    @apply bg-stone-50 text-stone-800 antialiased;
+    @apply bg-gradient-to-br from-blue-100 via-blue-50 to-tangerine-50 text-stone-800 antialiased;
+    background-attachment: fixed;
     font-feature-settings: 'cv11', 'ss01';
   }
 

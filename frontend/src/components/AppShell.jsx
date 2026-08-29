@@ -28,7 +28,7 @@ function AppShell({ children }) {
 
   return (
     <div
-      className={`min-h-screen bg-stone-50 pt-16 transition-[padding-left] duration-200 ease-out ${
+      className={`min-h-screen bg-gradient-to-br from-blue-100 via-blue-50 to-tangerine-50 pt-16 transition-[padding-left] duration-200 ease-out ${
         collapsed ? 'lg:pl-[68px]' : 'lg:pl-60'
       }`}
     >

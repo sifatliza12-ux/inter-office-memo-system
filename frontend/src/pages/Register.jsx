@@ -44,7 +44,7 @@ function Register() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-stone-50 px-4 py-10">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-100 via-blue-50 to-tangerine-50 px-4 py-10">
       <div className="w-full max-w-sm animate-fade-in-up">
         <div className="mb-6 text-center">
           <p className="font-mono text-xs font-semibold uppercase tracking-widest text-tangerine-500">

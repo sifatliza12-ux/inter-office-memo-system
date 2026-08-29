@@ -163,7 +163,7 @@ function MemoDetail() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-stone-50">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-gradient-to-br from-blue-100 via-blue-50 to-tangerine-50">
         <p className="text-sm text-red-600">{error}</p>
         <Link to="/memos" className="text-sm font-medium text-blue-700 hover:underline">
           Back to My Memos

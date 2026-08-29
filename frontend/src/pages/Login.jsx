@@ -84,7 +84,7 @@ function Login() {
   };
 
   return (
-    <div className="flex min-h-screen bg-stone-50">
+    <div className="flex min-h-screen bg-gradient-to-br from-blue-100 via-blue-50 to-tangerine-50">
       {/* Brand hero — desktop/tablet only; mobile gets a compact header
           band below instead of a second, cramped copy of this panel. */}
       <div className="relative hidden overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 lg:flex lg:w-1/2 xl:w-3/5">

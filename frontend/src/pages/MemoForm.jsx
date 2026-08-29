@@ -191,7 +191,7 @@ function MemoForm() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-stone-50">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-100 via-blue-50 to-tangerine-50">
         <LoadingSpinner label="Loading..." />
       </div>
     );
