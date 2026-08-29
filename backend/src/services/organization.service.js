@@ -2,6 +2,7 @@ const Organization = require('../models/Organization');
 const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
 const { isValidEmail } = require('../utils/validators');
+const { assertPasswordPolicy } = require('../utils/passwordPolicy');
 const { hashPassword } = require('./auth.service');
 const { logAuditEvent } = require('./audit.service');
 
@@ -27,9 +28,7 @@ const createOrganizationWithAdmin = async ({
     throw new ApiError(400, 'Please provide a valid admin email address');
   }
 
-  if (adminPassword.length < 8) {
-    throw new ApiError(400, 'Password must be at least 8 characters long');
-  }
+  assertPasswordPolicy(adminPassword);
 
   const normalizedIdentifier = identifier.toLowerCase().trim();
 

@@ -41,7 +41,7 @@ describe('Admin-only route authorization (Stage 3: department + user administrat
     const targetUser = await request(app)
       .post('/api/users')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: 'Target User', email: `target-${Date.now()}@acme.test`, password: 'TargetPass123' });
+      .send({ name: 'Target User', email: `target-${Date.now()}@acme.test`, password: 'TargetPass123!' });
     expect(targetUser.status).toBe(201);
     const targetUserId = targetUser.body.user._id;
 

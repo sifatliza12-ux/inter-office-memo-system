@@ -3,16 +3,26 @@ import { useCallback, useEffect, useState } from 'react';
 import { listUsers, createUser, updateUser, updateUserStatus } from '../services/users';
 import { listDepartments } from '../services/departments';
 import { useAuth } from '../context/AuthContext.jsx';
+import { isValidPassword, PASSWORD_REQUIREMENTS_MESSAGE } from '../utils/passwordPolicy';
 import Card from './ui/Card.jsx';
 import Button from './ui/Button.jsx';
 import Select from './ui/Select.jsx';
 import Field from './ui/Field.jsx';
 import Input from './ui/Input.jsx';
+import PasswordRequirements from './ui/PasswordRequirements.jsx';
 import { Table, THead, Th, Tr, Td } from './ui/Table.jsx';
 import EmptyState from './ui/EmptyState.jsx';
 import LoadingSpinner from './ui/LoadingSpinner.jsx';
 
-const emptyForm = { name: '', email: '', password: '', role: 'employee', designation: '', departmentId: '' };
+const emptyForm = {
+  name: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+  role: 'employee',
+  designation: '',
+  departmentId: '',
+};
 
 function UsersSection() {
   const { user: currentUser } = useAuth();
@@ -74,6 +84,7 @@ function UsersSection() {
       name: user.name,
       email: user.email,
       password: '',
+      confirmPassword: '',
       role: user.role,
       designation: user.designation || '',
       departmentId: user.departmentId || '',
@@ -85,6 +96,22 @@ function UsersSection() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setFormError('');
+
+    // Client-side validation is a convenience only — the backend enforces
+    // the same policy authoritatively and rejects an invalid password
+    // regardless of what happens here. Only relevant on create; edit never
+    // sends a password.
+    if (!editingId) {
+      if (!isValidPassword(form.password)) {
+        setFormError(PASSWORD_REQUIREMENTS_MESSAGE);
+        return;
+      }
+      if (form.password !== form.confirmPassword) {
+        setFormError('Passwords do not match.');
+        return;
+      }
+    }
+
     try {
       if (editingId) {
         await updateUser(editingId, {
@@ -211,16 +238,30 @@ function UsersSection() {
             />
           </Field>
           {!editingId && (
-            <Field label="Password" htmlFor="user-password" required>
-              <Input
-                id="user-password"
-                type="password"
-                required
-                minLength={8}
-                value={form.password}
-                onChange={(event) => setForm({ ...form, password: event.target.value })}
-              />
-            </Field>
+            <>
+              <Field label="Password" htmlFor="user-password" required>
+                <Input
+                  id="user-password"
+                  type="password"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  value={form.password}
+                  onChange={(event) => setForm({ ...form, password: event.target.value })}
+                />
+                <PasswordRequirements password={form.password} />
+              </Field>
+              <Field label="Confirm Password" htmlFor="user-confirm-password" required>
+                <Input
+                  id="user-confirm-password"
+                  type="password"
+                  required
+                  autoComplete="new-password"
+                  value={form.confirmPassword}
+                  onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })}
+                />
+              </Field>
+            </>
           )}
           <Field label="Designation" htmlFor="user-designation">
             <Input

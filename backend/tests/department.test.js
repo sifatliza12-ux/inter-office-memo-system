@@ -98,7 +98,7 @@ describe('Department administration', () => {
       .send({
         name: 'Support Person',
         email: `support-${Date.now()}@acme.test`,
-        password: 'SupportPass123',
+        password: 'SupportPass123!',
         departmentId,
       });
     expect(userResponse.status).toBe(201);

@@ -21,7 +21,7 @@ describe('User administration', () => {
       .send({
         name: 'New Hire',
         email: `newhire-${Date.now()}@acme.test`,
-        password: 'NewHirePass123',
+        password: 'NewHirePass123!',
         role: 'employee',
       });
 
@@ -69,7 +69,7 @@ describe('User administration', () => {
       .send({
         name: 'Sales Rep',
         email: `sales-${Date.now()}@acme.test`,
-        password: 'SalesPass123',
+        password: 'SalesPass123!',
         role: 'employee',
         departmentId,
       });
@@ -94,7 +94,7 @@ describe('User administration', () => {
     const response = await request(app)
       .post('/api/users')
       .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Duplicate', email: org.payload.adminEmail, password: 'DuplicatePass123' });
+      .send({ name: 'Duplicate', email: org.payload.adminEmail, password: 'DuplicatePass123!' });
 
     expect(response.status).toBe(409);
   });
@@ -133,7 +133,7 @@ describe('User administration', () => {
       .send({
         name: 'Cross Org',
         email: `crossorg-${Date.now()}@acme.test`,
-        password: 'CrossOrgPass123',
+        password: 'CrossOrgPass123!',
         departmentId: deptBId,
       });
     expect(createAttempt.status).toBe(400);
@@ -141,7 +141,7 @@ describe('User administration', () => {
     const validUser = await request(app)
       .post('/api/users')
       .set('Authorization', `Bearer ${tokenA}`)
-      .send({ name: 'Valid User', email: `validuser-${Date.now()}@acme.test`, password: 'ValidUserPass123' });
+      .send({ name: 'Valid User', email: `validuser-${Date.now()}@acme.test`, password: 'ValidUserPass123!' });
 
     const updateAttempt = await request(app)
       .patch(`/api/users/${validUser.body.user._id}`)

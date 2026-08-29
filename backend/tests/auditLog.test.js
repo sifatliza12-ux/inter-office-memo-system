@@ -61,7 +61,7 @@ describe('Audit logging: events', () => {
     const createResponse = await request(app)
       .post('/api/users')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: 'New Employee', email: `new-employee-${Date.now()}@acme.test`, password: 'NewEmployee123' });
+      .send({ name: 'New Employee', email: `new-employee-${Date.now()}@acme.test`, password: 'NewEmployee123!' });
     expect(createResponse.status).toBe(201);
     const newUserId = createResponse.body.user._id;
 

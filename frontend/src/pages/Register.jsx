@@ -3,12 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../context/AuthContext.jsx';
 import { createOrganization } from '../services/organizations';
+import { isValidPassword, PASSWORD_REQUIREMENTS_MESSAGE } from '../utils/passwordPolicy';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
 import Field from '../components/ui/Field.jsx';
 import Input from '../components/ui/Input.jsx';
+import PasswordRequirements from '../components/ui/PasswordRequirements.jsx';
 
-const emptyForm = { name: '', identifier: '', adminName: '', adminEmail: '', adminPassword: '' };
+const emptyForm = { name: '', identifier: '', adminName: '', adminEmail: '', adminPassword: '', confirmPassword: '' };
 
 function Register() {
   const [form, setForm] = useState(emptyForm);
@@ -22,10 +24,24 @@ function Register() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
+
+    // Client-side validation is a convenience only — the backend enforces
+    // the same policy authoritatively and rejects an invalid password
+    // regardless of what happens here.
+    if (!isValidPassword(form.adminPassword)) {
+      setError(PASSWORD_REQUIREMENTS_MESSAGE);
+      return;
+    }
+    if (form.adminPassword !== form.confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
-      await createOrganization(form);
+      const { confirmPassword: _confirmPassword, ...payload } = form;
+      await createOrganization(payload);
 
       try {
         await login(form.adminEmail, form.adminPassword);
@@ -93,6 +109,18 @@ function Register() {
                 autoComplete="new-password"
                 value={form.adminPassword}
                 onChange={handleChange('adminPassword')}
+              />
+              <PasswordRequirements password={form.adminPassword} />
+            </Field>
+
+            <Field label="Confirm Password" htmlFor="admin-confirm-password">
+              <Input
+                id="admin-confirm-password"
+                type="password"
+                required
+                autoComplete="new-password"
+                value={form.confirmPassword}
+                onChange={handleChange('confirmPassword')}
               />
             </Field>
 

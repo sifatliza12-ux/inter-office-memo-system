@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Department = require('../models/Department');
 const ApiError = require('../utils/ApiError');
 const { isValidEmail } = require('../utils/validators');
+const { assertPasswordPolicy } = require('../utils/passwordPolicy');
 const { hashPassword } = require('./auth.service');
 const { logAuditEvent } = require('./audit.service');
 
@@ -33,9 +34,7 @@ const createUser = async (
     throw new ApiError(400, 'Please provide a valid email address');
   }
 
-  if (password.length < 8) {
-    throw new ApiError(400, 'Password must be at least 8 characters long');
-  }
+  assertPasswordPolicy(password);
 
   await assertDepartmentBelongsToOrg(organizationId, departmentId);
 

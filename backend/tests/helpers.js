@@ -11,7 +11,7 @@ const createOrganizationWithAdmin = async (app, overrides = {}) => {
     subscriptionTier: 'premium',
     adminName: 'Jane Admin',
     adminEmail: `jane-${suffix}@acme.test`,
-    adminPassword: 'SuperSecret123',
+    adminPassword: 'SuperSecret123!',
     ...overrides,
   };
 
